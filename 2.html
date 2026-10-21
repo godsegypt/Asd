@@ -8,6 +8,8 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Three.js r128 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="js/game-modules.js"></script>
+    <script src="js/game-config.js"></script>
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -513,242 +515,7 @@
         /********************************************************************
          * 1. GLOBAL OYUN DURUMU VE EKONOMİ SİSTEMİ
          ********************************************************************/
-        const gameState = {
-            // Oyuncu istatistikleri
-            hp: 100,
-            maxHp: 100,
-            divinity: 45, // 100 olduğunda veya Göz çalındığında 2.5x Tanrı moduna geçebilir
-            isGodMode: false,
-            godDeity: 'horus', // 'horus' | 'set' | 'apis'
-            scaleCurrent: 1.0,
-            scaleTarget: 1.0,
-            weaponTier: 1, // 1: Tunç Hançer, 2: Altın Kanlı Khopesh, 3: Ra'nın Mızrağı
-            weaponDamage: 22,
-
-            // Canlı Sosyal Ekonomi Kaynakları
-            wheat: 12,
-            stone: 8,
-            gold: 65,
-            goldenBlood: 2,
-            horusEyes: 1,
-
-            // Sunucu / Dünya durumu
-            setTaxRate: 0.45, // %45 Tiranlık Vergisi (Tapınaktan Göz çalınınca %0 olur!)
-            setEyeStolen: false,
-            obeliskProgress: 42, // %100 olunca dikilitaş tamamlanır
-            raPower: 80, // %0 olursa Apophis güneşi yutar ve Karanlık Çağ başlar
-            isNightEvent: false,
-            darkAgePenalty: false,
-            inUnderworld: false,
-            underworldStonesLeft: 0,
-            sphinxSolved: false,
-            isMountedScarab: false,
-            workerSpeedBoost: 1.0,
-            soundEnabled: true,
-            questStep: 1,
-            thiefSkillLevel: 1,
-            divineNovaUnlocked: true,
-            companionActive: false,
-            cobraDefeatedCount: 0,
-            fpsCount: 60,
-
-            // Hareket ve Animasyon durumu
-            moveX: 0,
-            moveZ: 0,
-            cameraYaw: 0,
-            cameraPitch: 0.34,
-            cameraDist: 11.5,
-            attackAnimTimer: 0,
-            comboStage: 0,
-            dodgeTimer: 0,
-            specialAnimTimer: 0,
-            walkCycle: 0
-        };
-
-        // UI Yardımcı Fonksiyonları
-        let toastTimeout = null;
-        function showToast(msg) {
-            const banner = document.getElementById('toast-banner');
-            const text = document.getElementById('toast-text');
-            if (!banner || !text) return;
-            text.textContent = msg;
-            banner.style.opacity = '1';
-            banner.style.transform = 'translateY(0)';
-            clearTimeout(toastTimeout);
-            toastTimeout = setTimeout(() => {
-                banner.style.opacity = '0';
-                banner.style.transform = 'translateY(-8px)';
-            }, 3200);
-        }
-
-        // OFFLINE PROSEDÜREL SES MOTORU (Web Audio API - Harici MP3 Gerektirmez)
-        let audioCtx = null;
-        function initAudio() {
-            if (!audioCtx) {
-                const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-                if (AudioContextClass) audioCtx = new AudioContextClass();
-            }
-            if (audioCtx && audioCtx.state === 'suspended') {
-                audioCtx.resume();
-            }
-        }
-
-        function playSoundEffect(type) {
-            if (!gameState.soundEnabled) return;
-            try {
-                initAudio();
-                if (!audioCtx) return;
-                const now = audioCtx.currentTime;
-                const osc = audioCtx.createOscillator();
-                const gain = audioCtx.createGain();
-                osc.connect(gain);
-                gain.connect(audioCtx.destination);
-
-                if (type === 'slash') {
-                    osc.type = 'sawtooth';
-                    osc.frequency.setValueAtTime(280, now);
-                    osc.frequency.exponentialRampToValueAtTime(75, now + 0.14);
-                    gain.gain.setValueAtTime(0.16, now);
-                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
-                    osc.start(now);
-                    osc.stop(now + 0.15);
-                } else if (type === 'gold') {
-                    osc.type = 'sine';
-                    osc.frequency.setValueAtTime(587.33, now);
-                    osc.frequency.setValueAtTime(880, now + 0.08);
-                    gain.gain.setValueAtTime(0.15, now);
-                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.28);
-                    osc.start(now);
-                    osc.stop(now + 0.28);
-                } else if (type === 'god') {
-                    osc.type = 'triangle';
-                    osc.frequency.setValueAtTime(146.83, now);
-                    osc.frequency.exponentialRampToValueAtTime(440, now + 0.55);
-                    gain.gain.setValueAtTime(0.22, now);
-                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.6);
-                    osc.start(now);
-                    osc.stop(now + 0.6);
-                } else if (type === 'hit') {
-                    osc.type = 'square';
-                    osc.frequency.setValueAtTime(120, now);
-                    osc.frequency.exponentialRampToValueAtTime(40, now + 0.18);
-                    gain.gain.setValueAtTime(0.2, now);
-                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.19);
-                    osc.start(now);
-                    osc.stop(now + 0.19);
-                } else if (type === 'magic') {
-                    osc.type = 'sine';
-                    osc.frequency.setValueAtTime(320, now);
-                    osc.frequency.exponentialRampToValueAtTime(960, now + 0.38);
-                    gain.gain.setValueAtTime(0.22, now);
-                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
-                    osc.start(now);
-                    osc.stop(now + 0.4);
-                }
-            } catch (e) {
-                // Ignore audio context restrictions
-            }
-        }
-
-        function toggleSoundEngine() {
-            gameState.soundEnabled = !gameState.soundEnabled;
-            const btn = document.getElementById('btn-sound-toggle');
-            if (btn) btn.textContent = gameState.soundEnabled ? '🔊 Ses: Açık' : '🔇 Ses: Kapalı';
-        }
-
-        // 3D Dünya Koordinatından Ekrana Yüzen Hasar / Altın Yazısı Çıkarma
-        function spawnFloatingText(worldPos, text, colorHex = '#ffd700') {
-            const container = document.getElementById('floating-text-layer');
-            if (!container || !camera) return;
-            const proj = worldPos.clone();
-            proj.y += 2.2;
-            proj.project(camera);
-            if (proj.z > 1) return; // Kamera arkasındaysa gösterme
-
-            const x = (proj.x * 0.5 + 0.5) * window.innerWidth;
-            const y = (-(proj.y * 0.5) + 0.5) * window.innerHeight;
-
-            const el = document.createElement('div');
-            el.className = 'floating-dmg text-sm sm:text-base';
-            el.style.left = `${x - 20}px`;
-            el.style.top = `${y - 10}px`;
-            el.style.color = colorHex;
-            el.textContent = text;
-            container.appendChild(el);
-            setTimeout(() => el.remove(), 1150);
-        }
-
-        function updateStoryQuestTracker() {
-            const qTitle = document.getElementById('quest-title');
-            const qDesc = document.getElementById('quest-desc');
-            if (!qTitle || !qDesc) return;
-
-            if (!gameState.sphinxSolved) {
-                qTitle.textContent = '1. Dev Sfenks\'in Bilmecesini Çöz';
-                qDesc.textContent = 'Tuzaklı Tapınak girişindeki Sfenks\'e (Z: 28) yaklaş ve bilmeceyi yanıtla.';
-            } else if (!gameState.setEyeStolen) {
-                qTitle.textContent = '2. Tuzaklı Tapınaktan Horus\'un Gözünü Çal';
-                qDesc.textContent = 'Sallanan giyotinlerden takla (💨) ile geçip Gözü çal ve %45 vergiyi yık!';
-            } else if (gameState.weaponTier < 2) {
-                qTitle.textContent = '3. Altın Kan Topla & Efsanevi Silah Döv';
-                qDesc.textContent = 'Set\'i yaralayarak dökülen Altın Kanları topla ve Ptah Ocağında silah üret.';
-            } else {
-                qTitle.textContent = '4. Set\'i Mağlup Et & Ra\'nın Gemisini Koru!';
-                qDesc.textContent = '2.5x Tanrı formuna (🦅) dönüşerek Set\'i devir ve gece Apophis\'i yok et!';
-            }
-        }
-
-        function openModal(id) {
-            document.getElementById(id).classList.remove('hidden');
-        }
-        function closeModal(id) {
-            document.getElementById(id).classList.add('hidden');
-        }
-
-        function updateHUD() {
-            document.getElementById('res-wheat').textContent = gameState.wheat;
-            document.getElementById('res-stone').textContent = gameState.stone;
-            document.getElementById('res-gold').textContent = gameState.gold;
-            document.getElementById('res-golden-blood').textContent = gameState.goldenBlood;
-            document.getElementById('res-eyes').textContent = `${gameState.horusEyes}/2`;
-
-            const hpPct = Math.max(0, Math.min(100, (gameState.hp / gameState.maxHp) * 100));
-            document.getElementById('hp-bar').style.width = `${hpPct}%`;
-            document.getElementById('hp-text').textContent = `CAN: ${Math.ceil(gameState.hp)}/${gameState.maxHp}`;
-
-            const divPct = Math.max(0, Math.min(100, gameState.divinity));
-            document.getElementById('divinity-bar').style.width = `${divPct}%`;
-            document.getElementById('divinity-text').textContent = `İLAHİ GÜÇ: ${Math.floor(gameState.divinity)}/100`;
-
-            const badge = document.getElementById('avatar-badge');
-            const title = document.getElementById('player-title');
-            if (gameState.isGodMode) {
-                const deityNames = {
-                    horus: 'HORUS ŞAHİN FORMU (2.5x)',
-                    set: 'SET ÇAKAL FORMU (2.5x)',
-                    apis: 'APİS BOĞA FORMU (2.5x)'
-                };
-                badge.textContent = gameState.godDeity.toUpperCase().slice(0, 3);
-                title.textContent = deityNames[gameState.godDeity];
-                title.className = 'font-cinzel font-bold text-xs sm:text-sm text-cyan-300 tracking-wide';
-            } else {
-                badge.textContent = 'BEK';
-                title.textContent = gameState.weaponTier > 1 ? 'EFSANEVİ HIRSIZ BEK (1.0x)' : 'ÖLÜMLÜ HIRSIZ BEK (1.0x)';
-                title.className = 'font-cinzel font-bold text-xs sm:text-sm text-amber-300 tracking-wide';
-            }
-
-            const taxBadge = document.getElementById('tax-badge');
-            if (gameState.setEyeStolen) {
-                taxBadge.textContent = 'Set Vergisi: %0 (Özgür!)';
-                taxBadge.className = 'px-1.5 py-0.5 rounded bg-emerald-950/90 border border-emerald-400/60 text-emerald-300 font-semibold text-[10px]';
-            } else {
-                taxBadge.textContent = `Set Vergisi: %${Math.round(gameState.setTaxRate * 100)}`;
-            }
-
-            document.getElementById('obelisk-progress-text').textContent = `Dikilitaş: %${Math.min(100, gameState.obeliskProgress)} İnşa`;
-            document.getElementById('ra-power-bar').style.width = `${Math.max(0, Math.min(100, gameState.raPower))}%`;
-            updateStoryQuestTracker();
-        }
+        const gameState = GameConfig.createInitialState();
 
         /********************************************************************
          * 2. THREE.JS SAHNE, IŞIKLANDIRMA VE PROSEDÜREL DOKU ÜRETİCİSİ
@@ -3000,123 +2767,6 @@
         }
 
         /********************************************************************
-         * 9. MOBİL DOKUNMATİK ANALOG, 360° KAMERA SÜRÜKLEME VE KLAVYE
-         ********************************************************************/
-        const joystickZone = document.getElementById('joystick-zone');
-        const joystickKnob = document.getElementById('joystick-knob');
-        let joystickTouchId = null;
-        let cameraTouchId = null;
-        let lastCamX = 0;
-        let lastCamY = 0;
-
-        function handleJoystickMove(clientX, clientY) {
-            const rect = joystickZone.getBoundingClientRect();
-            const centerX = rect.left + rect.width / 2;
-            const centerY = rect.top + rect.height / 2;
-            const maxRadius = rect.width * 0.38;
-
-            let dx = clientX - centerX;
-            let dy = clientY - centerY;
-            const dist = Math.hypot(dx, dy);
-            if (dist > maxRadius) {
-                dx = (dx / dist) * maxRadius;
-                dy = (dy / dist) * maxRadius;
-            }
-            joystickKnob.style.transform = `translate(${dx}px, ${dy}px)`;
-            gameState.moveX = dx / maxRadius;
-            gameState.moveZ = dy / maxRadius;
-        }
-
-        function resetJoystick() {
-            joystickTouchId = null;
-            joystickKnob.style.transform = `translate(0px, 0px)`;
-            gameState.moveX = 0;
-            gameState.moveZ = 0;
-        }
-
-        joystickZone.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            const touch = e.changedTouches[0];
-            joystickTouchId = touch.identifier;
-            handleJoystickMove(touch.clientX, touch.clientY);
-        }, { passive: false });
-
-        joystickZone.addEventListener('touchmove', (e) => {
-            e.preventDefault();
-            for (let t of e.changedTouches) {
-                if (t.identifier === joystickTouchId) {
-                    handleJoystickMove(t.clientX, t.clientY);
-                }
-            }
-        }, { passive: false });
-
-        joystickZone.addEventListener('touchend', (e) => {
-            for (let t of e.changedTouches) {
-                if (t.identifier === joystickTouchId) resetJoystick();
-            }
-        });
-
-        // Kamera Döndürme (Canvas üzerinde dokunmatik & fare sürükleme)
-        canvas.addEventListener('touchstart', (e) => {
-            const touch = e.changedTouches[0];
-            cameraTouchId = touch.identifier;
-            lastCamX = touch.clientX;
-            lastCamY = touch.clientY;
-        }, { passive: true });
-
-        canvas.addEventListener('touchmove', (e) => {
-            for (let t of e.changedTouches) {
-                if (t.identifier === cameraTouchId) {
-                    const dx = t.clientX - lastCamX;
-                    const dy = t.clientY - lastCamY;
-                    lastCamX = t.clientX;
-                    lastCamY = t.clientY;
-                    gameState.cameraYaw -= dx * 0.007;
-                    gameState.cameraPitch = Math.max(0.15, Math.min(1.15, gameState.cameraPitch + dy * 0.005));
-                }
-            }
-        }, { passive: true });
-
-        let isMouseDragging = false;
-        canvas.addEventListener('mousedown', (e) => {
-            isMouseDragging = true;
-            lastCamX = e.clientX;
-            lastCamY = e.clientY;
-        });
-        window.addEventListener('mousemove', (e) => {
-            if (!isMouseDragging) return;
-            const dx = e.clientX - lastCamX;
-            const dy = e.clientY - lastCamY;
-            lastCamX = e.clientX;
-            lastCamY = e.clientY;
-            gameState.cameraYaw -= dx * 0.006;
-            gameState.cameraPitch = Math.max(0.15, Math.min(1.15, gameState.cameraPitch + dy * 0.005));
-        });
-        window.addEventListener('mouseup', () => { isMouseDragging = false; });
-
-        // Klavye Desteği (WASD + Space)
-        const keys = {};
-        window.addEventListener('keydown', (e) => {
-            keys[e.code] = true;
-            if (e.code === 'Space') performPrimaryAction();
-            if (e.code === 'ShiftLeft') gameState.dodgeTimer = 0.48;
-            if (e.code === 'KeyG') toggleGodTransformation();
-        });
-        window.addEventListener('keyup', (e) => { keys[e.code] = false; });
-
-        // Sağ Aksiyon Butonları Dinleyicileri
-        document.getElementById('btn-attack').addEventListener('click', performPrimaryAction);
-        document.getElementById('btn-dodge').addEventListener('click', () => {
-            if (gameState.dodgeTimer <= 0) {
-                gameState.dodgeTimer = 0.48;
-                showToast('💨 Hırsız Taklası! Tuzaklardan sıyrıldın.');
-            }
-        });
-        document.getElementById('btn-god-form').addEventListener('click', toggleGodTransformation);
-        document.getElementById('btn-special').addEventListener('click', performSpecialDivineSkill);
-        document.getElementById('btn-trigger-night').addEventListener('click', toggleNightApophisEvent);
-
-        /********************************************************************
          * 10. ANA OYUN DÖNGÜSÜ (GAME LOOP): FİZİK, TUZAKLAR, AI VE ANİMASYON
          ********************************************************************/
         const clock = new THREE.Clock();
@@ -3416,6 +3066,8 @@
 
             // 11. Canlı Radar Mini-Harita Çizimi
             drawRadarMiniMap();
+
+            GameModules.update(dt, elapsed);
         }
 
         const minimapCanvas = document.getElementById('minimap-canvas');
@@ -3501,10 +3153,57 @@
         });
 
         window.onload = function () {
+            GameModules.start({
+                state: gameState,
+                scene,
+                camera,
+                renderer,
+                player,
+                world: {
+                    obelisk: obeliskGroup,
+                    temple: templeGroup,
+                    traps: pendulumTraps,
+                    eyeOfHorus: eyeOfHorusMesh,
+                    solarBarque,
+                    apophisSegments,
+                    underworld: underworldGroup,
+                    anubis: anubisEntity,
+                    soulStones,
+                    villagers,
+                    wildBeasts,
+                    setBoss: bossSet,
+                    cobra: giantFireCobra,
+                    companion: companionZaya,
+                    divineVfx: divineVfxGroup,
+                    goldenBloodDrops
+                },
+                factories: {
+                    createArticulatedEgyptianHuman,
+                    createWildBeast,
+                    createGoldMineRock
+                },
+                actions: {
+                    showToast,
+                    spawnFloatingText,
+                    playSoundEffect,
+                    openModal,
+                    closeModal,
+                    updateHUD,
+                    teleportPlayer,
+                    performPrimaryAction,
+                    performSpecialDivineSkill,
+                    toggleGodTransformation,
+                    toggleNightApophisEvent,
+                    spawnGoldenBloodDrop
+                }
+            });
             updateHUD();
             showToast('☥ Mısır Tanrıları Dünyasına Hoş Geldin! Altın Kan topla, Tuzaklı Tapınaktan Gözü çal ve 2.5x Tanrıya dönüş!');
             animateLoop();
         };
     </script>
+    <script src="js/ui.js"></script>
+    <script src="js/audio.js"></script>
+    <script src="js/input.js"></script>
 </body>
 </html>
