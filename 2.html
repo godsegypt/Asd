@@ -1,0 +1,3510 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Mısır Tanrıları: Altın Kan ve İlahi İsyan</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Three.js r128 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-touch-callout: none;
+        }
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #0b0906;
+            font-family: 'Inter', sans-serif;
+            touch-action: none;
+        }
+        .font-cinzel {
+            font-family: 'Cinzel', serif;
+        }
+        #game-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            display: block;
+        }
+        .egypt-panel {
+            background: linear-gradient(145deg, rgba(24, 18, 10, 0.88), rgba(12, 9, 5, 0.94));
+            border: 1px solid rgba(212, 175, 55, 0.45);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.75), inset 0 0 12px rgba(212, 175, 55, 0.12);
+            backdrop-filter: blur(8px);
+        }
+        .egypt-btn {
+            background: linear-gradient(180deg, #d4af37 0%, #996515 100%);
+            border: 1px solid #ffe885;
+            color: #150d04;
+            font-weight: 700;
+            text-shadow: 0 1px 0 rgba(255, 255, 255, 0.4);
+            box-shadow: 0 4px 15px rgba(212, 175, 55, 0.35);
+            transition: transform 0.12s ease, filter 0.12s ease;
+        }
+        .egypt-btn:active {
+            transform: scale(0.92);
+            filter: brightness(1.15);
+        }
+        .action-circle {
+            background: radial-gradient(circle at 30% 30%, rgba(45, 34, 18, 0.92), rgba(15, 11, 6, 0.96));
+            border: 2px solid rgba(235, 192, 70, 0.7);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.8), inset 0 0 10px rgba(212, 175, 55, 0.25);
+            transition: all 0.1s ease;
+        }
+        .action-circle:active {
+            transform: scale(0.88);
+            border-color: #fff3b0;
+            box-shadow: 0 0 25px rgba(255, 215, 0, 0.75);
+        }
+        @keyframes pulseGold {
+            0%, 100% { box-shadow: 0 0 12px rgba(255, 200, 40, 0.4); }
+            50% { box-shadow: 0 0 26px rgba(255, 215, 0, 0.95); }
+        }
+        .gold-glow {
+            animation: pulseGold 2s infinite;
+        }
+        @keyframes floatUpFade {
+            0% { opacity: 1; transform: translateY(0) scale(0.9); }
+            100% { opacity: 0; transform: translateY(-42px) scale(1.15); }
+        }
+        .floating-dmg {
+            position: absolute;
+            pointer-events: none;
+            font-family: 'Cinzel', serif;
+            font-weight: 900;
+            text-shadow: 0 2px 6px rgba(0,0,0,0.95);
+            animation: floatUpFade 1.15s ease-out forwards;
+            z-index: 25;
+        }
+        /* Hide scrollbars on mobile quick dock */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        /* Custom scrollbar for modals */
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: #120d07; }
+        ::-webkit-scrollbar-thumb { background: #b8860b; border-radius: 4px; }
+    </style>
+</head>
+<body class="text-amber-100 select-none">
+
+    <!-- 3D WebGL Canvas -->
+    <canvas id="game-canvas"></canvas>
+
+    <!-- Floating 3D Combat & Economy Numbers Container -->
+    <div id="floating-text-layer" class="fixed inset-0 pointer-events-none z-20 overflow-hidden"></div>
+
+    <!-- UI OVERLAY (Optimized for Mobile Portrait & Landscape - Clear Center Screen) -->
+    <div id="ui-layer" class="relative z-10 w-full h-full pointer-events-none flex flex-col justify-between pt-11 pb-3 px-2.5 sm:p-4">
+
+        <!-- TOP HUD BAR (Compact, Sleek & Non-Intrusive) -->
+        <div class="w-full flex flex-col gap-1.5 pointer-events-auto">
+            <!-- Row 1: Player Card (Left) + Economy Pill + Radar Minimap (Right) -->
+            <div class="flex items-start justify-between gap-2">
+                <!-- Left: Player Identity, HP, Divinity & Ra Status -->
+                <div class="flex flex-col gap-1.5 max-w-[68%] sm:max-w-md">
+                    <div class="egypt-panel rounded-xl px-2.5 py-1.5 flex items-center gap-2.5 shadow-lg">
+                        <div id="avatar-badge" class="w-10 h-10 rounded-lg bg-gradient-to-br from-amber-400 via-yellow-600 to-amber-950 flex items-center justify-center border border-amber-200 shadow-inner font-cinzel font-black text-sm text-black shrink-0">
+                            BEK
+                        </div>
+                        <div class="flex-1 min-w-[145px]">
+                            <div class="flex items-center justify-between gap-1">
+                                <span id="player-title" class="font-cinzel font-bold text-[11px] sm:text-xs text-amber-300 truncate">ÖLÜMLÜ HIRSIZ BEK</span>
+                                <span id="zone-indicator" class="text-[9px] px-1.5 py-0.5 rounded bg-amber-950/90 border border-amber-500/40 text-amber-200 shrink-0">Nil Vadisi</span>
+                            </div>
+                            <!-- HP Bar -->
+                            <div class="w-full h-2 bg-black/85 rounded-full overflow-hidden border border-red-900/70 mt-1">
+                                <div id="hp-bar" class="h-full bg-gradient-to-r from-red-700 via-red-500 to-amber-400 transition-all duration-200" style="width: 100%;"></div>
+                            </div>
+                            <!-- Divinity Bar -->
+                            <div class="w-full h-1.5 bg-black/85 rounded-full overflow-hidden border border-amber-700/60 mt-1">
+                                <div id="divinity-bar" class="h-full bg-gradient-to-r from-amber-600 via-yellow-400 to-cyan-300 transition-all duration-200" style="width: 45%;"></div>
+                            </div>
+                            <div class="flex justify-between text-[9px] text-amber-200/85 mt-0.5 font-semibold">
+                                <span id="hp-text">CAN: 100/100</span>
+                                <span id="divinity-text">İLAHİ: 45/100</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Compact Resource Strip -->
+                    <div class="egypt-panel rounded-lg px-2 py-1 flex items-center gap-2 text-[11px] overflow-x-auto no-scrollbar">
+                        <div class="flex items-center gap-0.5 shrink-0" title="Buğday ve Papirüs">
+                            <span>🌾</span><span id="res-wheat" class="font-bold text-amber-200">12</span>
+                        </div>
+                        <div class="flex items-center gap-0.5 shrink-0" title="Taş ve Odun">
+                            <span>🪨</span><span id="res-stone" class="font-bold text-stone-300">8</span>
+                        </div>
+                        <div class="flex items-center gap-0.5 shrink-0" title="Altın">
+                            <span>🪙</span><span id="res-gold" class="font-bold text-yellow-400">65</span>
+                        </div>
+                        <div class="flex items-center gap-1 px-1.5 py-0.5 rounded bg-amber-950/90 border border-yellow-400/50 shrink-0">
+                            <span>🩸</span><span id="res-golden-blood" class="font-black text-yellow-300">2</span>
+                        </div>
+                        <div class="flex items-center gap-1 px-1.5 py-0.5 rounded bg-cyan-950/90 border border-cyan-400/50 shrink-0">
+                            <span>👁️</span><span id="res-eyes" class="font-black text-cyan-300">1/2</span>
+                        </div>
+                        <span id="tax-badge" class="px-1.5 py-0.5 rounded bg-red-950/90 border border-red-500/50 text-red-300 font-semibold text-[9px] shrink-0">
+                            Vergi:%45
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Right: Radar Mini-Map + Quick Ra & Audio Controls -->
+                <div class="flex flex-col items-end gap-1">
+                    <div class="egypt-panel rounded-full p-1 border-2 border-amber-500/70 shadow-xl relative">
+                        <canvas id="minimap-canvas" width="76" height="76" class="rounded-full bg-black/85"></canvas>
+                        <span id="fps-perf-badge" class="absolute -bottom-1.5 left-1/2 -translate-x-1/2 px-1.5 py-0.2 bg-black/90 border border-amber-500/40 rounded text-[8px] text-emerald-300 font-mono whitespace-nowrap">60 FPS</span>
+                    </div>
+                    <div class="flex items-center gap-1 mt-0.5">
+                        <button id="btn-trigger-night" class="egypt-btn px-2 py-1 rounded-md text-[9px] whitespace-nowrap shadow">
+                            🐍 Gece Savaşı
+                        </button>
+                        <button id="btn-sound-toggle" onclick="toggleSoundEngine()" class="egypt-panel px-1.5 py-1 rounded-md text-[9px] text-amber-200 border border-amber-400/40">
+                            🔊
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Row 2: Ultra-Compact Story Quest + Ra Solar Barque Bar -->
+            <div class="egypt-panel rounded-lg px-2.5 py-1 flex items-center justify-between gap-2 border-l-4 border-l-amber-400">
+                <div class="truncate">
+                    <span id="quest-title" class="text-[10px] sm:text-xs font-bold text-amber-200">📜 1. Dev Sfenks'in Bilmecesini Çöz</span>
+                    <span id="quest-desc" class="text-[9px] text-amber-200/70 hidden sm:inline ml-2">Tapınak girişindeki Sfenks'e yaklaş.</span>
+                </div>
+                <div class="flex items-center gap-2 shrink-0">
+                    <span id="sky-state-label" class="text-[9px] font-cinzel font-bold text-amber-300">☀️ RA</span>
+                    <div class="w-14 h-1.5 bg-black/80 rounded-full overflow-hidden border border-amber-600/40">
+                        <div id="ra-power-bar" class="h-full bg-gradient-to-r from-orange-600 via-amber-400 to-yellow-200" style="width: 80%;"></div>
+                    </div>
+                    <span id="obelisk-progress-text" class="text-[9px] text-amber-200/80">🏛️%42</span>
+                    <span id="apophis-timer-text" class="hidden">Hazır</span>
+                </div>
+            </div>
+
+            <!-- Row 3: Horizontal Scrollable Quick-Teleport & Menus Bar (NEVER blocks center screen!) -->
+            <div class="egypt-panel rounded-xl p-1 flex items-center gap-1.5 overflow-x-auto no-scrollbar shadow-md">
+                <button onclick="teleportPlayer('nile')" class="px-2.5 py-1 rounded-lg bg-amber-950/80 border border-amber-500/40 text-[10px] text-amber-200 whitespace-nowrap active:scale-95 shrink-0">
+                    🌴 Nil & Köy
+                </button>
+                <button onclick="teleportPlayer('obelisk')" class="px-2.5 py-1 rounded-lg bg-amber-950/80 border border-amber-500/40 text-[10px] text-amber-200 whitespace-nowrap active:scale-95 shrink-0">
+                    🏛️ Dikilitaş & Set
+                </button>
+                <button onclick="teleportPlayer('temple')" class="px-2.5 py-1 rounded-lg bg-cyan-950/80 border border-cyan-500/40 text-[10px] text-cyan-200 whitespace-nowrap active:scale-95 shrink-0">
+                    👁️ Tuzaklı Tapınak
+                </button>
+                <button onclick="teleportPlayer('cobra')" class="px-2.5 py-1 rounded-lg bg-orange-950/80 border border-orange-500/40 text-[10px] text-orange-200 whitespace-nowrap active:scale-95 shrink-0">
+                    🐍 Ateş Kobrası
+                </button>
+                <button onclick="openModal('craft-modal')" class="px-2.5 py-1 rounded-lg bg-yellow-950/80 border border-yellow-500/50 text-[10px] text-yellow-300 whitespace-nowrap active:scale-95 shrink-0">
+                    ⚒️ Altın Kan Ocağı
+                </button>
+                <button onclick="openModal('market-modal')" class="px-2.5 py-1 rounded-lg bg-emerald-950/80 border border-emerald-500/50 text-[10px] text-emerald-300 whitespace-nowrap active:scale-95 shrink-0">
+                    ⚖️ Pazar & Vergi
+                </button>
+                <button onclick="openModal('thoth-modal')" class="px-2.5 py-1 rounded-lg bg-purple-950/80 border border-purple-500/50 text-[10px] text-purple-300 whitespace-nowrap active:scale-95 shrink-0">
+                    📜 Thoth & Zaya
+                </button>
+                <button onclick="toggleScarabMount()" id="btn-mount-scarab" class="px-2.5 py-1 rounded-lg bg-amber-900/90 border border-amber-300/60 text-[10px] text-amber-200 font-bold whitespace-nowrap active:scale-95 shrink-0">
+                    🪲 Khepri Bineği
+                </button>
+            </div>
+
+            <!-- Dynamic Boss Health Bar -->
+            <div id="boss-hud" class="hidden self-center w-full max-w-sm egypt-panel rounded-xl px-3 py-1 border-red-500/70">
+                <div class="flex justify-between items-center text-[10px] font-cinzel font-bold">
+                    <span id="boss-name" class="text-red-400">ÇÖL TANRISI SET (2.5x İLAHİ FORM)</span>
+                    <span id="boss-hp-label" class="text-amber-300">500 / 500</span>
+                </div>
+                <div class="w-full h-2 bg-black rounded-full overflow-hidden border border-red-600/50 mt-0.5">
+                    <div id="boss-hp-bar" class="h-full bg-gradient-to-r from-red-700 via-amber-500 to-yellow-300 transition-all duration-150" style="width: 100%;"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- CENTER NOTIFICATION TOAST -->
+        <div id="toast-banner" class="pointer-events-none self-center transition-all duration-300 opacity-0 transform -translate-y-2 egypt-panel px-4 py-1.5 rounded-full border-amber-400 text-center max-w-xs sm:max-w-md shadow-2xl">
+            <span id="toast-text" class="font-cinzel font-bold text-[11px] sm:text-sm text-amber-200"></span>
+        </div>
+
+        <!-- BOTTOM CONTROLS (Unobstructed Center View, Ergonomic Thumb Zones) -->
+        <div class="w-full flex items-end justify-between pb-2 pointer-events-none">
+            <!-- Left: Virtual Thumbstick -->
+            <div class="flex flex-col items-start gap-2 pointer-events-auto">
+                <div id="joystick-zone" class="relative w-28 h-28 sm:w-36 sm:h-36 rounded-full bg-amber-950/30 border-2 border-amber-400/45 flex items-center justify-center shadow-2xl backdrop-blur-sm">
+                    <div class="w-16 h-16 rounded-full border border-amber-400/20 pointer-events-none"></div>
+                    <div id="joystick-knob" class="w-11 h-11 rounded-full bg-gradient-to-br from-amber-300 via-yellow-500 to-amber-800 border-2 border-yellow-100 shadow-lg pointer-events-none transition-transform duration-75 flex items-center justify-center">
+                        <div class="w-3.5 h-3.5 rounded-full bg-amber-950/60"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right: Ergonomic Arc Action Cluster -->
+            <div class="relative w-44 h-40 sm:w-52 sm:h-48 pointer-events-auto flex items-end justify-end">
+                <!-- Primary Attack / Harvest / Combo Button -->
+                <button id="btn-attack" class="action-circle w-20 h-20 sm:w-24 sm:h-24 rounded-full flex flex-col items-center justify-center text-amber-200 absolute bottom-1 right-1 gold-glow">
+                    <span id="primary-btn-icon" class="text-2xl sm:text-3xl">⚔️</span>
+                    <span id="primary-btn-label" class="font-cinzel font-bold text-[9px] sm:text-xs tracking-tighter text-amber-300">KOMBO / TOPLA</span>
+                </button>
+
+                <!-- Dodge / Thief Roll Button -->
+                <button id="btn-dodge" class="action-circle w-13 h-13 sm:w-14 sm:h-14 p-2.5 rounded-full flex flex-col items-center justify-center text-amber-200 absolute bottom-1 right-24 sm:right-28">
+                    <span class="text-base sm:text-lg">💨</span>
+                    <span class="text-[8px] font-bold text-amber-300">TAKLA</span>
+                </button>
+
+                <!-- God Transformation Button (Horus / Set / Apis 2.5x) -->
+                <button id="btn-god-form" class="action-circle w-13 h-13 sm:w-14 sm:h-14 p-2 rounded-full flex flex-col items-center justify-center text-cyan-200 absolute bottom-16 right-20 sm:bottom-22 sm:right-24 border-cyan-400/70">
+                    <span id="god-btn-icon" class="text-base sm:text-lg">🦅</span>
+                    <span class="text-[8px] font-bold text-cyan-300">TANRI 2.5x</span>
+                </button>
+
+                <!-- Special Divine Skill -->
+                <button id="btn-special" class="action-circle w-13 h-13 sm:w-14 sm:h-14 p-2 rounded-full flex flex-col items-center justify-center text-yellow-200 absolute bottom-24 right-2 sm:bottom-28 sm:right-3 border-yellow-400/80">
+                    <span class="text-base sm:text-lg">✨</span>
+                    <span class="text-[8px] font-bold text-yellow-300">İLAHİ GÜÇ</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- GOLDEN BLOOD CRAFTING & ECONOMY MODAL -->
+    <div id="craft-modal" class="hidden fixed inset-0 z-30 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+        <div class="egypt-panel rounded-2xl max-w-lg w-full p-5 border-2 border-amber-400/60 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center border-b border-amber-500/30 pb-3">
+                <div>
+                    <h2 class="font-cinzel font-black text-lg sm:text-xl text-amber-300">⚒️ PTAH'IN ALTIN KAN OCAĞI & TAPINAK</h2>
+                    <p class="text-xs text-amber-200/70">Tanrılardan dökülen Altın Kan ile Efsanevi Silahlar dövün veya Ra'ya adak sunun</p>
+                </div>
+                <button onclick="closeModal('craft-modal')" class="w-8 h-8 rounded-lg bg-amber-950 border border-amber-500/40 text-amber-300 font-bold">✕</button>
+            </div>
+
+            <div class="space-y-3 mt-4">
+                <!-- Weapon 1 -->
+                <div class="p-3 rounded-xl bg-black/50 border border-amber-600/30 flex items-center justify-between gap-2">
+                    <div>
+                        <div class="font-cinzel font-bold text-sm text-amber-300">🗡️ Altın Kanlı Khopesh Kılıcı</div>
+                        <div class="text-xs text-amber-100/75">Hasar +35 | Tanrılardan 2 kat fazla Altın Kan döker.</div>
+                        <div class="text-[11px] text-yellow-400 mt-1">Gereksinim: 2 Altın Kan + 20 Altın</div>
+                    </div>
+                    <button onclick="craftItem('khopesh')" class="egypt-btn px-3 py-2 rounded-lg text-xs">ÜRET</button>
+                </div>
+
+                <!-- Weapon 2 -->
+                <div class="p-3 rounded-xl bg-black/50 border border-cyan-500/30 flex items-center justify-between gap-2">
+                    <div>
+                        <div class="font-cinzel font-bold text-sm text-cyan-300">🔱 Ra'nın Güneş Mızrağı</div>
+                        <div class="text-xs text-amber-100/75">Hasar +75 | Uzaktan Güneş Işını ve Apophis'e kritik darbe!</div>
+                        <div class="text-[11px] text-cyan-300 mt-1">Gereksinim: 4 Altın Kan + 1 Horus Gözü</div>
+                    </div>
+                    <button onclick="craftItem('spear')" class="egypt-btn px-3 py-2 rounded-lg text-xs">ÜRET</button>
+                </div>
+
+                <!-- God Ascension Form Selector -->
+                <div class="p-3 rounded-xl bg-black/50 border border-yellow-500/40">
+                    <div class="font-cinzel font-bold text-sm text-yellow-300 mb-2">👑 İlahi Zırh Dönüşüm Formunu Seç (2.5x Boyut)</div>
+                    <div class="grid grid-cols-3 gap-2">
+                        <button onclick="selectGodDeity('horus')" id="deity-btn-horus" class="p-2 rounded-lg bg-amber-900/60 border-2 border-amber-400 text-center text-xs">
+                            <div class="text-lg">🦅</div>
+                            <div class="font-bold text-amber-200">HORUS</div>
+                            <div class="text-[10px] text-amber-300/80">Altın Şahin & Uçuş</div>
+                        </button>
+                        <button onclick="selectGodDeity('set')" id="deity-btn-set" class="p-2 rounded-lg bg-stone-900/70 border border-amber-700/40 text-center text-xs">
+                            <div class="text-lg">🐺</div>
+                            <div class="font-bold text-red-300">SET</div>
+                            <div class="text-[10px] text-amber-300/80">Çakal Fırtınası</div>
+                        </button>
+                        <button onclick="selectGodDeity('apis')" id="deity-btn-apis" class="p-2 rounded-lg bg-stone-900/70 border border-amber-700/40 text-center text-xs">
+                            <div class="text-lg">🐂</div>
+                            <div class="font-bold text-yellow-300">APİS</div>
+                            <div class="text-[10px] text-amber-300/80">İlahi Boğa Depremi</div>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Ra Solar Barque Donation -->
+                <div class="p-3 rounded-xl bg-black/50 border border-orange-500/40 flex items-center justify-between gap-2">
+                    <div>
+                        <div class="font-cinzel font-bold text-sm text-orange-300">☀️ Ra'nın Güneş Gemisine Dua & Adak Bağışla</div>
+                        <div class="text-xs text-amber-100/75">Apophis'in güneşi yutmasını engeller ve +30 İlahi Güç verir.</div>
+                        <div class="text-[11px] text-orange-300 mt-1">Maliyet: 5 Buğday + 15 Altın</div>
+                    </div>
+                    <button onclick="donateToRa()" class="egypt-btn px-3 py-2 rounded-lg text-xs">BAĞIŞLA</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- VILLAGER SOCIAL ECONOMY MARKET & DIVINE TAX POLICY MODAL -->
+    <div id="market-modal" class="hidden fixed inset-0 z-30 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+        <div class="egypt-panel rounded-2xl max-w-lg w-full p-5 border-2 border-emerald-400/60 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center border-b border-amber-500/30 pb-3">
+                <div>
+                    <h2 class="font-cinzel font-black text-lg sm:text-xl text-emerald-300">⚖️ CANLI SOSYAL EKONOMİ & PAZAR</h2>
+                    <p class="text-xs text-amber-200/75">Köylülerle ticaret yap, kervanları yönet veya Tanrı formunda vergi oranını belirle</p>
+                </div>
+                <button onclick="closeModal('market-modal')" class="w-8 h-8 rounded-lg bg-amber-950 border border-amber-500/40 text-amber-300 font-bold">✕</button>
+            </div>
+
+            <div class="space-y-3 mt-4 text-xs">
+                <!-- Trade 1 -->
+                <div class="p-3 rounded-xl bg-black/50 border border-amber-600/30 flex items-center justify-between">
+                    <div>
+                        <div class="font-bold text-amber-300">🌾 Köylü Tüccara 6 Buğday Sat</div>
+                        <div class="text-amber-100/70">Nil çiftçileriyle takas yaparak sıcak altın kazan.</div>
+                    </div>
+                    <button onclick="tradeWithVillagers('sell_wheat')" class="egypt-btn px-3 py-2 rounded-lg">+25 🪙 SAT</button>
+                </div>
+
+                <!-- Trade 2 -->
+                <div class="p-3 rounded-xl bg-black/50 border border-amber-600/30 flex items-center justify-between">
+                    <div>
+                        <div class="font-bold text-stone-200">🪨 Taş Ustalarından 5 Blok Taş Al</div>
+                        <div class="text-amber-100/70">Dikilitaşı hızla tamamlamak için taş satın al.</div>
+                    </div>
+                    <button onclick="tradeWithVillagers('buy_stone')" class="egypt-btn px-3 py-2 rounded-lg">-20 🪙 AL</button>
+                </div>
+
+                <!-- Trade 3: Hire Villager Caravan -->
+                <div class="p-3 rounded-xl bg-black/50 border border-cyan-500/30 flex items-center justify-between">
+                    <div>
+                        <div class="font-bold text-cyan-300">🐪 Ölümlü İşçi Kervanı Finanse Et</div>
+                        <div class="text-amber-100/70">Köylülerin yürüme ve Dikilitaş inşa hızını 2 katına çıkarır!</div>
+                    </div>
+                    <button onclick="tradeWithVillagers('boost_workers')" class="egypt-btn px-3 py-2 rounded-lg">-30 🪙 KİRALA</button>
+                </div>
+
+                <!-- God Player Tax Slider (Anti-Tyranny System) -->
+                <div class="p-3 rounded-xl bg-amber-950/40 border border-yellow-500/40 space-y-2">
+                    <div class="font-cinzel font-bold text-yellow-300">👑 İLAHİ YÖNETİCİ VERGİ KARARNAMESİ (2.5x Tanrı Yetkisi)</div>
+                    <p class="text-[11px] text-amber-100/80">
+                        Tanrı statüsündeyken halktan alınan vergiyi değiştirebilirsin. Düşük vergi halkın sevgisini ve İlahi Gücünü artırır; yüksek vergi altın kazandırır ama Hırsızların tapınağına sızma riskini doğurur!
+                    </p>
+                    <div class="flex gap-2">
+                        <button onclick="setDivineTaxPolicy(0.0)" class="flex-1 py-2 rounded-lg bg-emerald-900/80 border border-emerald-400 text-emerald-200 font-bold">
+                            %0 Adil Horus Yönetimi
+                        </button>
+                        <button onclick="setDivineTaxPolicy(0.20)" class="flex-1 py-2 rounded-lg bg-amber-900/80 border border-amber-400 text-amber-200 font-bold">
+                            %20 Dengeli Vergi
+                        </button>
+                        <button onclick="setDivineTaxPolicy(0.50)" class="flex-1 py-2 rounded-lg bg-red-950/90 border border-red-400 text-red-200 font-bold">
+                            %50 Tiranlık Vergisi
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- THOTH'S LIBRARY, SKILL TREE & ZAYA/HATHOR COMPANION MODAL -->
+    <div id="thoth-modal" class="hidden fixed inset-0 z-30 bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
+        <div class="egypt-panel rounded-2xl max-w-lg w-full p-5 border-2 border-purple-400/70 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center border-b border-amber-500/30 pb-3">
+                <div>
+                    <h2 class="font-cinzel font-black text-lg sm:text-xl text-purple-300">📜 THOTH'UN KÜTÜPHANESİ & REFAKATÇİLER</h2>
+                    <p class="text-xs text-amber-200/75">Hırsız ve Tanrı yeteneklerini geliştir; Zaya veya Tanrıça Hathor'u yanına çağır</p>
+                </div>
+                <button onclick="closeModal('thoth-modal')" class="w-8 h-8 rounded-lg bg-amber-950 border border-amber-500/40 text-amber-300 font-bold">✕</button>
+            </div>
+
+            <div class="space-y-3 mt-4 text-xs">
+                <!-- Skill 1: Mortal Thief Mastery -->
+                <div class="p-3 rounded-xl bg-black/50 border border-amber-500/30 flex items-center justify-between gap-2">
+                    <div>
+                        <div class="font-cinzel font-bold text-amber-300">🗡️ Ölümlü Hırsız Ustalığı (Bek'in Çevikliği)</div>
+                        <div class="text-amber-100/75">Kılıç hasarını +20 artırır ve takla sırasında tuzaklardan %100 korur.</div>
+                        <div class="text-[11px] text-yellow-400 mt-1">Maliyet: 25 Altın + 1 Altın Kan</div>
+                    </div>
+                    <button onclick="upgradeSkill('thief')" class="egypt-btn px-3 py-2 rounded-lg whitespace-nowrap">GELİŞTİR</button>
+                </div>
+
+                <!-- Skill 2: Divine Solar Nova -->
+                <div class="p-3 rounded-xl bg-black/50 border border-cyan-500/30 flex items-center justify-between gap-2">
+                    <div>
+                        <div class="font-cinzel font-bold text-cyan-300">☀️ İlahi Güneş Patlaması & Fırtına Halkası</div>
+                        <div class="text-amber-100/75">İlahi Güç (✨) tuşuna basıldığında 3D altın şok dalgası ve gökyüzü ışını indirir!</div>
+                        <div class="text-[11px] text-cyan-300 mt-1">Maliyet: 2 Altın Kan</div>
+                    </div>
+                    <button onclick="upgradeSkill('divine_nova')" class="egypt-btn px-3 py-2 rounded-lg whitespace-nowrap">ÖĞREN</button>
+                </div>
+
+                <!-- Companion 1: Zaya & Hathor's Star Bracelet -->
+                <div class="p-3 rounded-xl bg-purple-950/40 border border-purple-400/50 flex items-center justify-between gap-2">
+                    <div>
+                        <div class="font-cinzel font-bold text-purple-200">💖 Zaya & Hathor'un 42 Yıldızlı Bileziği</div>
+                        <div class="text-amber-100/80">
+                            Filmdeki gibi Hathor'un Yıldız Bileziği ile Zaya'yı Duat'tan kurtar! Eklemli insan modeliyle seni takip eder, saniyede +3 Can yeniler ve düşmanlara ışık saçar.
+                        </div>
+                        <div class="text-[11px] text-purple-300 mt-1">Gereksinim: 30 Altın + 1 Altın Kan</div>
+                    </div>
+                    <button onclick="summonCompanion('zaya')" id="btn-summon-zaya" class="egypt-btn px-3 py-2 rounded-lg whitespace-nowrap">KURTAR & ÇAĞIR</button>
+                </div>
+
+                <!-- World Event: Royal Gold Caravan -->
+                <div class="p-3 rounded-xl bg-black/50 border border-orange-500/40 flex items-center justify-between gap-2">
+                    <div>
+                        <div class="font-cinzel font-bold text-orange-300">🐍 Dev Ateş Kobrası & Kraliyet Hazinesi</div>
+                        <div class="text-amber-100/75">Astarte'nin zırhlı dev ateş kobrasını avlayarak +3 Altın Kan ve +80 Altın kazan!</div>
+                    </div>
+                    <button onclick="closeModal('thoth-modal'); teleportPlayer('cobra');" class="egypt-btn px-3 py-2 rounded-lg whitespace-nowrap">SAVAŞA GİT</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SPHINX GUARDIAN RIDDLE MODAL (FİLMDEKİ SFENKS BİLMECESİ) -->
+    <div id="sphinx-modal" class="hidden fixed inset-0 z-40 bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
+        <div class="egypt-panel rounded-2xl max-w-md w-full p-5 border-2 border-amber-400 text-center">
+            <div class="text-3xl mb-1">🦁👑🌪️</div>
+            <h2 class="font-cinzel font-black text-xl text-amber-300">DEV SFENKS MUHAFIZININ BİLMECESİ</h2>
+            <p class="text-xs text-amber-100/90 mt-2 italic">
+                "Ölümlü Hırsız Bek! Set'in Hazine Tapınağına girmek istiyorsan bilmecemi çöz, yoksa kum fırtınam seni yutar:
+                <br><br>
+                <strong class="text-yellow-300">Asla dinlenmem, asla uyumam. Kum tepelerini sessizce hareket ettiririm; beni göremezsin ama çölün her zerresinde hissedersin. Ben neyim?</strong>"
+            </p>
+            <div class="grid grid-cols-1 gap-2 mt-4 text-xs">
+                <button onclick="answerSphinxRiddle('wind')" class="egypt-btn py-2.5 rounded-xl">🌪️ Çöl Rüzgarı / Nefes</button>
+                <button onclick="answerSphinxRiddle('gold')" class="p-2.5 rounded-xl bg-stone-900 border border-amber-700/50 text-amber-200">🪙 Firavunun Altını</button>
+                <button onclick="answerSphinxRiddle('scorpion')" class="p-2.5 rounded-xl bg-stone-900 border border-amber-700/50 text-amber-200">🦂 Dev Çöl Akrebi</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ANUBIS AFTERLIFE JUDGMENT MODAL (AHİRET VERGİSİ) -->
+    <div id="anubis-modal" class="hidden fixed inset-0 z-40 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 pointer-events-none">
+        <div class="egypt-panel rounded-2xl max-w-md w-full p-5 border-2 border-purple-500/70 text-center pointer-events-auto">
+            <div class="text-3xl mb-1">⚖️🐺</div>
+            <h2 class="font-cinzel font-black text-xl text-purple-300">ANUBİS'İN TERAZİSİ & AHİRET VERGİSİ</h2>
+            <p class="text-xs text-amber-100/85 mt-2">
+                Ruhun Duat'a (Yeraltı Dünyası) düştü! Set'in kanunlarına göre ölümden dönmek paralıdır. Kalbin Ma'at'ın tüyüyle tartılıyor:
+            </p>
+            <div class="my-4 p-3 rounded-xl bg-purple-950/50 border border-purple-500/40 text-xs space-y-1">
+                <div>Mevcut Altının: <span id="anubis-gold-count" class="font-bold text-yellow-400">0</span> 🪙</div>
+                <div>Ahiret Geçiş Vergisi: <span class="font-bold text-amber-300">40 Altın</span></div>
+                <div id="underworld-stone-status" class="text-cyan-300 font-semibold pt-1">
+                    Veya Yeraltı Dünyası'nda 3 Ruh Taşı kırarak cezanı doldur! (Kalan: 3)
+                </div>
+            </div>
+            <div class="flex gap-2 justify-center">
+                <button onclick="payAnubisTax()" class="egypt-btn px-4 py-2.5 rounded-xl text-xs flex-1">
+                    🪙 40 Altın Öde & Hemen Diril
+                </button>
+                <button onclick="closeAnubisModalToMine()" class="px-4 py-2.5 rounded-xl text-xs font-bold bg-purple-900/90 border border-purple-400 text-purple-100 flex-1">
+                    ⛏️ Yeraltında Taş Kır
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /********************************************************************
+         * 1. GLOBAL OYUN DURUMU VE EKONOMİ SİSTEMİ
+         ********************************************************************/
+        const gameState = {
+            // Oyuncu istatistikleri
+            hp: 100,
+            maxHp: 100,
+            divinity: 45, // 100 olduğunda veya Göz çalındığında 2.5x Tanrı moduna geçebilir
+            isGodMode: false,
+            godDeity: 'horus', // 'horus' | 'set' | 'apis'
+            scaleCurrent: 1.0,
+            scaleTarget: 1.0,
+            weaponTier: 1, // 1: Tunç Hançer, 2: Altın Kanlı Khopesh, 3: Ra'nın Mızrağı
+            weaponDamage: 22,
+
+            // Canlı Sosyal Ekonomi Kaynakları
+            wheat: 12,
+            stone: 8,
+            gold: 65,
+            goldenBlood: 2,
+            horusEyes: 1,
+
+            // Sunucu / Dünya durumu
+            setTaxRate: 0.45, // %45 Tiranlık Vergisi (Tapınaktan Göz çalınınca %0 olur!)
+            setEyeStolen: false,
+            obeliskProgress: 42, // %100 olunca dikilitaş tamamlanır
+            raPower: 80, // %0 olursa Apophis güneşi yutar ve Karanlık Çağ başlar
+            isNightEvent: false,
+            darkAgePenalty: false,
+            inUnderworld: false,
+            underworldStonesLeft: 0,
+            sphinxSolved: false,
+            isMountedScarab: false,
+            workerSpeedBoost: 1.0,
+            soundEnabled: true,
+            questStep: 1,
+            thiefSkillLevel: 1,
+            divineNovaUnlocked: true,
+            companionActive: false,
+            cobraDefeatedCount: 0,
+            fpsCount: 60,
+
+            // Hareket ve Animasyon durumu
+            moveX: 0,
+            moveZ: 0,
+            cameraYaw: 0,
+            cameraPitch: 0.34,
+            cameraDist: 11.5,
+            attackAnimTimer: 0,
+            comboStage: 0,
+            dodgeTimer: 0,
+            specialAnimTimer: 0,
+            walkCycle: 0
+        };
+
+        // UI Yardımcı Fonksiyonları
+        let toastTimeout = null;
+        function showToast(msg) {
+            const banner = document.getElementById('toast-banner');
+            const text = document.getElementById('toast-text');
+            if (!banner || !text) return;
+            text.textContent = msg;
+            banner.style.opacity = '1';
+            banner.style.transform = 'translateY(0)';
+            clearTimeout(toastTimeout);
+            toastTimeout = setTimeout(() => {
+                banner.style.opacity = '0';
+                banner.style.transform = 'translateY(-8px)';
+            }, 3200);
+        }
+
+        // OFFLINE PROSEDÜREL SES MOTORU (Web Audio API - Harici MP3 Gerektirmez)
+        let audioCtx = null;
+        function initAudio() {
+            if (!audioCtx) {
+                const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+                if (AudioContextClass) audioCtx = new AudioContextClass();
+            }
+            if (audioCtx && audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
+        function playSoundEffect(type) {
+            if (!gameState.soundEnabled) return;
+            try {
+                initAudio();
+                if (!audioCtx) return;
+                const now = audioCtx.currentTime;
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+
+                if (type === 'slash') {
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(280, now);
+                    osc.frequency.exponentialRampToValueAtTime(75, now + 0.14);
+                    gain.gain.setValueAtTime(0.16, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+                    osc.start(now);
+                    osc.stop(now + 0.15);
+                } else if (type === 'gold') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(587.33, now);
+                    osc.frequency.setValueAtTime(880, now + 0.08);
+                    gain.gain.setValueAtTime(0.15, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.28);
+                    osc.start(now);
+                    osc.stop(now + 0.28);
+                } else if (type === 'god') {
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(146.83, now);
+                    osc.frequency.exponentialRampToValueAtTime(440, now + 0.55);
+                    gain.gain.setValueAtTime(0.22, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.6);
+                    osc.start(now);
+                    osc.stop(now + 0.6);
+                } else if (type === 'hit') {
+                    osc.type = 'square';
+                    osc.frequency.setValueAtTime(120, now);
+                    osc.frequency.exponentialRampToValueAtTime(40, now + 0.18);
+                    gain.gain.setValueAtTime(0.2, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.19);
+                    osc.start(now);
+                    osc.stop(now + 0.19);
+                } else if (type === 'magic') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(320, now);
+                    osc.frequency.exponentialRampToValueAtTime(960, now + 0.38);
+                    gain.gain.setValueAtTime(0.22, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
+                    osc.start(now);
+                    osc.stop(now + 0.4);
+                }
+            } catch (e) {
+                // Ignore audio context restrictions
+            }
+        }
+
+        function toggleSoundEngine() {
+            gameState.soundEnabled = !gameState.soundEnabled;
+            const btn = document.getElementById('btn-sound-toggle');
+            if (btn) btn.textContent = gameState.soundEnabled ? '🔊 Ses: Açık' : '🔇 Ses: Kapalı';
+        }
+
+        // 3D Dünya Koordinatından Ekrana Yüzen Hasar / Altın Yazısı Çıkarma
+        function spawnFloatingText(worldPos, text, colorHex = '#ffd700') {
+            const container = document.getElementById('floating-text-layer');
+            if (!container || !camera) return;
+            const proj = worldPos.clone();
+            proj.y += 2.2;
+            proj.project(camera);
+            if (proj.z > 1) return; // Kamera arkasındaysa gösterme
+
+            const x = (proj.x * 0.5 + 0.5) * window.innerWidth;
+            const y = (-(proj.y * 0.5) + 0.5) * window.innerHeight;
+
+            const el = document.createElement('div');
+            el.className = 'floating-dmg text-sm sm:text-base';
+            el.style.left = `${x - 20}px`;
+            el.style.top = `${y - 10}px`;
+            el.style.color = colorHex;
+            el.textContent = text;
+            container.appendChild(el);
+            setTimeout(() => el.remove(), 1150);
+        }
+
+        function updateStoryQuestTracker() {
+            const qTitle = document.getElementById('quest-title');
+            const qDesc = document.getElementById('quest-desc');
+            if (!qTitle || !qDesc) return;
+
+            if (!gameState.sphinxSolved) {
+                qTitle.textContent = '1. Dev Sfenks\'in Bilmecesini Çöz';
+                qDesc.textContent = 'Tuzaklı Tapınak girişindeki Sfenks\'e (Z: 28) yaklaş ve bilmeceyi yanıtla.';
+            } else if (!gameState.setEyeStolen) {
+                qTitle.textContent = '2. Tuzaklı Tapınaktan Horus\'un Gözünü Çal';
+                qDesc.textContent = 'Sallanan giyotinlerden takla (💨) ile geçip Gözü çal ve %45 vergiyi yık!';
+            } else if (gameState.weaponTier < 2) {
+                qTitle.textContent = '3. Altın Kan Topla & Efsanevi Silah Döv';
+                qDesc.textContent = 'Set\'i yaralayarak dökülen Altın Kanları topla ve Ptah Ocağında silah üret.';
+            } else {
+                qTitle.textContent = '4. Set\'i Mağlup Et & Ra\'nın Gemisini Koru!';
+                qDesc.textContent = '2.5x Tanrı formuna (🦅) dönüşerek Set\'i devir ve gece Apophis\'i yok et!';
+            }
+        }
+
+        function openModal(id) {
+            document.getElementById(id).classList.remove('hidden');
+        }
+        function closeModal(id) {
+            document.getElementById(id).classList.add('hidden');
+        }
+
+        function updateHUD() {
+            document.getElementById('res-wheat').textContent = gameState.wheat;
+            document.getElementById('res-stone').textContent = gameState.stone;
+            document.getElementById('res-gold').textContent = gameState.gold;
+            document.getElementById('res-golden-blood').textContent = gameState.goldenBlood;
+            document.getElementById('res-eyes').textContent = `${gameState.horusEyes}/2`;
+
+            const hpPct = Math.max(0, Math.min(100, (gameState.hp / gameState.maxHp) * 100));
+            document.getElementById('hp-bar').style.width = `${hpPct}%`;
+            document.getElementById('hp-text').textContent = `CAN: ${Math.ceil(gameState.hp)}/${gameState.maxHp}`;
+
+            const divPct = Math.max(0, Math.min(100, gameState.divinity));
+            document.getElementById('divinity-bar').style.width = `${divPct}%`;
+            document.getElementById('divinity-text').textContent = `İLAHİ GÜÇ: ${Math.floor(gameState.divinity)}/100`;
+
+            const badge = document.getElementById('avatar-badge');
+            const title = document.getElementById('player-title');
+            if (gameState.isGodMode) {
+                const deityNames = {
+                    horus: 'HORUS ŞAHİN FORMU (2.5x)',
+                    set: 'SET ÇAKAL FORMU (2.5x)',
+                    apis: 'APİS BOĞA FORMU (2.5x)'
+                };
+                badge.textContent = gameState.godDeity.toUpperCase().slice(0, 3);
+                title.textContent = deityNames[gameState.godDeity];
+                title.className = 'font-cinzel font-bold text-xs sm:text-sm text-cyan-300 tracking-wide';
+            } else {
+                badge.textContent = 'BEK';
+                title.textContent = gameState.weaponTier > 1 ? 'EFSANEVİ HIRSIZ BEK (1.0x)' : 'ÖLÜMLÜ HIRSIZ BEK (1.0x)';
+                title.className = 'font-cinzel font-bold text-xs sm:text-sm text-amber-300 tracking-wide';
+            }
+
+            const taxBadge = document.getElementById('tax-badge');
+            if (gameState.setEyeStolen) {
+                taxBadge.textContent = 'Set Vergisi: %0 (Özgür!)';
+                taxBadge.className = 'px-1.5 py-0.5 rounded bg-emerald-950/90 border border-emerald-400/60 text-emerald-300 font-semibold text-[10px]';
+            } else {
+                taxBadge.textContent = `Set Vergisi: %${Math.round(gameState.setTaxRate * 100)}`;
+            }
+
+            document.getElementById('obelisk-progress-text').textContent = `Dikilitaş: %${Math.min(100, gameState.obeliskProgress)} İnşa`;
+            document.getElementById('ra-power-bar').style.width = `${Math.max(0, Math.min(100, gameState.raPower))}%`;
+            updateStoryQuestTracker();
+        }
+
+        /********************************************************************
+         * 2. THREE.JS SAHNE, IŞIKLANDIRMA VE PROSEDÜREL DOKU ÜRETİCİSİ
+         ********************************************************************/
+        const canvas = document.getElementById('game-canvas');
+        const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.05;
+
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0xc88a4b);
+        scene.fog = new THREE.FogExp2(0xc88a4b, 0.0038);
+
+        const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.5, 450);
+
+        // Işıklar
+        const ambientLight = new THREE.HemisphereLight(0xffe9c2, 0x5c3d1e, 0.82);
+        scene.add(ambientLight);
+
+        const sunLight = new THREE.DirectionalLight(0xffdf91, 1.45);
+        sunLight.position.set(60, 95, 45);
+        sunLight.castShadow = true;
+        sunLight.shadow.mapSize.width = 1024;
+        sunLight.shadow.mapSize.height = 1024;
+        sunLight.shadow.camera.near = 10;
+        sunLight.shadow.camera.far = 230;
+        const d = 80;
+        sunLight.shadow.camera.left = -d;
+        sunLight.shadow.camera.right = d;
+        sunLight.shadow.camera.top = d;
+        sunLight.shadow.camera.bottom = -d;
+        scene.add(sunLight);
+
+        // Prosedürel Kum & Hiyeroglif Taş Dokuları (Zengin Kontrastlı Çöl Kumulları)
+        function createSandTexture() {
+            const c = document.createElement('canvas');
+            c.width = 256; c.height = 256;
+            const ctx = c.getContext('2d');
+            const grad = ctx.createLinearGradient(0, 0, 256, 256);
+            grad.addColorStop(0, '#c88f48');
+            grad.addColorStop(0.5, '#ba7e38');
+            grad.addColorStop(1, '#cf9650');
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, 256, 256);
+            for (let y = 0; y < 256; y += 2) {
+                const wave = Math.sin(y * 0.12) * 14;
+                ctx.fillStyle = y % 4 === 0 ? 'rgba(255,220,160,0.14)' : 'rgba(95,55,15,0.14)';
+                ctx.fillRect(0, y, 256, 2);
+                for (let i = 0; i < 12; i++) {
+                    const x = (i * 23 + wave + Math.random() * 10) % 256;
+                    ctx.fillStyle = Math.random() > 0.5 ? '#deb06d' : '#8f5b22';
+                    ctx.fillRect(x, y, 2, 2);
+                }
+            }
+            const tex = new THREE.CanvasTexture(c);
+            tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+            tex.repeat.set(42, 42);
+            return tex;
+        }
+
+        function createHieroglyphTexture() {
+            const c = document.createElement('canvas');
+            c.width = 256; c.height = 256;
+            const ctx = c.getContext('2d');
+            ctx.fillStyle = '#c29b61';
+            ctx.fillRect(0, 0, 256, 256);
+            ctx.strokeStyle = '#735326';
+            ctx.lineWidth = 3;
+            for (let y = 0; y < 256; y += 64) {
+                ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(256, y); ctx.stroke();
+                for (let x = 0; x < 256; x += 64) {
+                    ctx.strokeRect(x + 4, y + 4, 56, 56);
+                    ctx.fillStyle = '#d4af37';
+                    ctx.font = 'bold 26px serif';
+                    const glyphs = ['☥', '𓂀', '☀️', '🦅', '🐍', '⚖️'];
+                    ctx.fillText(glyphs[(x + y) % glyphs.length], x + 18, y + 42);
+                }
+            }
+            const tex = new THREE.CanvasTexture(c);
+            tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+            return tex;
+        }
+
+        const sandTex = createSandTexture();
+        const hieroTex = createHieroglyphTexture();
+
+        // Ortak Materyaller (Gerçekçi Cilt, Keten, İlahi Altın, Lapis Lazuli)
+        const MATS = {
+            skinMortal: new THREE.MeshStandardMaterial({ color: 0xb87648, roughness: 0.55, metalness: 0.08 }),
+            skinVillager: new THREE.MeshStandardMaterial({ color: 0xa66438, roughness: 0.6, metalness: 0.05 }),
+            skinSet: new THREE.MeshStandardMaterial({ color: 0x8f5230, roughness: 0.4, metalness: 0.2 }),
+            linenWhite: new THREE.MeshStandardMaterial({ color: 0xf3ead8, roughness: 0.75, metalness: 0.02 }),
+            linenCrimson: new THREE.MeshStandardMaterial({ color: 0x8c1d1d, roughness: 0.6, metalness: 0.1 }),
+            linenThief: new THREE.MeshStandardMaterial({ color: 0x2c353d, roughness: 0.65, metalness: 0.1 }),
+            divineGold: new THREE.MeshStandardMaterial({ color: 0xffcf40, roughness: 0.18, metalness: 0.92, emissive: 0x3a2500, emissiveIntensity: 0.35 }),
+            darkArmorSet: new THREE.MeshStandardMaterial({ color: 0x2a221b, roughness: 0.25, metalness: 0.88, emissive: 0x330800, emissiveIntensity: 0.3 }),
+            lapisBlue: new THREE.MeshStandardMaterial({ color: 0x154c8a, roughness: 0.25, metalness: 0.6 }),
+            turquoiseGlow: new THREE.MeshStandardMaterial({ color: 0x00f0ff, emissive: 0x00d8ff, emissiveIntensity: 0.9, roughness: 0.1 }),
+            goldenBloodMat: new THREE.MeshStandardMaterial({ color: 0xffd700, emissive: 0xff9900, emissiveIntensity: 0.75, roughness: 0.08, metalness: 0.98 }),
+            hairBlack: new THREE.MeshStandardMaterial({ color: 0x161311, roughness: 0.8 }),
+            steelBlade: new THREE.MeshStandardMaterial({ color: 0xd8e2eb, roughness: 0.2, metalness: 0.9 }),
+            stoneHiero: new THREE.MeshStandardMaterial({ map: hieroTex, roughness: 0.75, metalness: 0.08 })
+        };
+
+        /********************************************************************
+         * 3. ULTRA DETAYLI EKLEMLİ İNSAN & TANRI KARAKTER TASARIM MOTORU
+         * (V-Taper Sırt ve Omuz Anatomisi, Dalgalanan Mısır Pelerini,
+         *  Pileli Kraliyet Eteği, 3'lü Kılıç Kombo İzi ve İlahi Zırh)
+         ********************************************************************/
+        function createArticulatedEgyptianHuman(config = {}) {
+            const {
+                role = 'player', // 'player' | 'villager' | 'set_boss' | 'anubis'
+                skinMat = MATS.skinMortal,
+                clothMat = MATS.linenWhite,
+                accentMat = MATS.divineGold
+            } = config;
+
+            const root = new THREE.Group();
+            const isHeroOrBoss = (role === 'player' || role === 'set_boss' || role === 'anubis');
+
+            // Ana kalça/pelvis merkezi (Yürüme salınımı merkezi)
+            const hipGroup = new THREE.Group();
+            hipGroup.position.y = 1.05;
+            root.add(hipGroup);
+
+            // Pelvis ve Pileli Mısır Keten Eteği (Shendyt)
+            const pelvisMesh = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.22, 0.24, 0.24, 12),
+                clothMat
+            );
+            hipGroup.add(pelvisMesh);
+
+            // İşlemeli Geniş Altın Kemer ve Lapis Lazuli Tokası
+            const beltMesh = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.245, 0.245, 0.09, 14),
+                accentMat
+            );
+            beltMesh.position.y = 0.09;
+            hipGroup.add(beltMesh);
+
+            const beltBuckle = new THREE.Mesh(
+                new THREE.OctahedronGeometry(0.065, 0),
+                MATS.lapisBlue
+            );
+            beltBuckle.position.set(0, 0.09, 0.24);
+            hipGroup.add(beltBuckle);
+
+            // Çok Katmanlı Pileli Shendyt Etek
+            const kiltSkirt = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.235, 0.31, 0.40, 12),
+                clothMat
+            );
+            kiltSkirt.position.y = -0.14;
+            kiltSkirt.scale.set(1.04, 1, 0.86);
+            kiltSkirt.castShadow = isHeroOrBoss;
+            hipGroup.add(kiltSkirt);
+
+            // Altın Kenar Şeridi (Etek Ucu)
+            const kiltHem = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.312, 0.318, 0.045, 12),
+                accentMat
+            );
+            kiltHem.position.y = -0.32;
+            kiltHem.scale.set(1.04, 1, 0.86);
+            hipGroup.add(kiltHem);
+
+            // Ön Kraliyet Önlüğü (Sallanan Hiyeroglifli Tören Kumaşı)
+            const sashApron = new THREE.Mesh(
+                new THREE.BoxGeometry(0.15, 0.44, 0.03),
+                accentMat
+            );
+            sashApron.position.set(0, -0.16, 0.22);
+            hipGroup.add(sashApron);
+
+            // OMURGA & V-TAPER ANATOMİK GÖĞÜS KAFESİ
+            const spineGroup = new THREE.Group();
+            spineGroup.position.y = 0.14;
+            hipGroup.add(spineGroup);
+
+            // Karın ve Bel (Abs & Obliques)
+            const abdomenMesh = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.25, 0.205, 0.30, 12),
+                skinMat
+            );
+            abdomenMesh.position.y = 0.15;
+            abdomenMesh.scale.set(1.05, 1, 0.74);
+            spineGroup.add(abdomenMesh);
+
+            // Göğüs (Pectorals, Latissimus Dorsi & Trapez)
+            const chestGroup = new THREE.Group();
+            chestGroup.position.y = 0.28;
+            spineGroup.add(chestGroup);
+
+            // Atletik V-Üst Gövde (Omuzlarla pürüzsüz birleşen kaslı sırt ve göğüs)
+            const ribcageMesh = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.32, 0.245, 0.40, 14),
+                skinMat
+            );
+            ribcageMesh.position.y = 0.20;
+            ribcageMesh.scale.set(1.15, 1, 0.76);
+            ribcageMesh.castShadow = true;
+            chestGroup.add(ribcageMesh);
+
+            // Trapez / Üst Sırt Kas Eğimi (Omuz topu görüntüsünü tamamen ortadan kaldırır)
+            const trapsSlope = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.16, 0.34, 0.14, 12),
+                skinMat
+            );
+            trapsSlope.position.y = 0.42;
+            trapsSlope.scale.set(1.18, 1, 0.72);
+            chestGroup.add(trapsSlope);
+
+            // Sırt Kasları (Latissimus Dorsi & Omurga Çizgisi) + Kraliyet Sırt Pelerini
+            for (let side of [-1, 1]) {
+                const pec = new THREE.Mesh(
+                    new THREE.SphereGeometry(0.135, 10, 8),
+                    skinMat
+                );
+                pec.scale.set(1.15, 0.82, 0.52);
+                pec.position.set(side * 0.11, 0.25, 0.14);
+                chestGroup.add(pec);
+
+                const backLat = new THREE.Mesh(
+                    new THREE.SphereGeometry(0.13, 10, 8),
+                    skinMat
+                );
+                backLat.scale.set(1.05, 1.15, 0.48);
+                backLat.position.set(side * 0.11, 0.22, -0.13);
+                chestGroup.add(backLat);
+            }
+
+            // Mısır Geniş Altın & Lapis Gerdanlığı (Usekh Collar - Omuzları saran konik zırh)
+            const collarMesh = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.18, 0.37, 0.12, 16),
+                accentMat
+            );
+            collarMesh.position.y = 0.39;
+            collarMesh.scale.set(1.12, 1, 0.78);
+            chestGroup.add(collarMesh);
+
+            const collarInlay = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.21, 0.34, 0.125, 16),
+                MATS.lapisBlue
+            );
+            collarInlay.position.y = 0.392;
+            collarInlay.scale.set(1.08, 1, 0.75);
+            chestGroup.add(collarInlay);
+
+            // Sırt Pelerini / Çöl Şalı (Yürürken ve koşarken arkada dalgalanır)
+            const capePivot = new THREE.Group();
+            capePivot.position.set(0, 0.38, -0.18);
+            chestGroup.add(capePivot);
+
+            if (role !== 'villager') {
+                const capeClasp = new THREE.Mesh(
+                    new THREE.BoxGeometry(0.38, 0.07, 0.06),
+                    MATS.divineGold
+                );
+                capePivot.add(capeClasp);
+
+                const capeCloth = new THREE.Mesh(
+                    new THREE.BoxGeometry(0.46, 0.88, 0.025),
+                    role === 'player' ? MATS.linenCrimson : MATS.darkArmorSet
+                );
+                capeCloth.position.set(0, -0.44, -0.02);
+                capeCloth.rotation.x = 0.12;
+                capePivot.add(capeCloth);
+
+                const capeGoldTrim = new THREE.Mesh(
+                    new THREE.BoxGeometry(0.48, 0.06, 0.03),
+                    MATS.divineGold
+                );
+                capeGoldTrim.position.set(0, -0.86, -0.07);
+                capePivot.add(capeGoldTrim);
+            }
+
+            // BOYUN & DETAYLI İNSAN BAŞI
+            const neckGroup = new THREE.Group();
+            neckGroup.position.y = 0.42;
+            chestGroup.add(neckGroup);
+
+            const neckMesh = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.095, 0.115, 0.15, 10),
+                skinMat
+            );
+            neckMesh.position.y = 0.06;
+            neckGroup.add(neckMesh);
+
+            const headGroup = new THREE.Group();
+            headGroup.position.y = 0.18;
+            neckGroup.add(headGroup);
+
+            // Kafatası ve Çene Hattı
+            const cranium = new THREE.Mesh(
+                new THREE.SphereGeometry(0.18, 14, 12),
+                skinMat
+            );
+            cranium.scale.set(0.92, 1.08, 0.98);
+            headGroup.add(cranium);
+
+            const jawline = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.135, 0.09, 0.14, 10),
+                skinMat
+            );
+            jawline.position.set(0, -0.1, 0.03);
+            headGroup.add(jawline);
+
+            // Burun Kemeri ve Gözler
+            const nose = new THREE.Mesh(
+                new THREE.ConeGeometry(0.03, 0.1, 5),
+                skinMat
+            );
+            nose.position.set(0, -0.01, 0.185);
+            nose.rotation.x = Math.PI * 0.42;
+            headGroup.add(nose);
+
+            const eyeMat = (role === 'set_boss' || role === 'anubis') ? MATS.turquoiseGlow : MATS.hairBlack;
+            for (let side of [-1, 1]) {
+                const eyeWhite = new THREE.Mesh(
+                    new THREE.SphereGeometry(0.026, 6, 6),
+                    new THREE.MeshBasicMaterial({ color: 0xffffff })
+                );
+                eyeWhite.scale.set(1.3, 0.75, 0.6);
+                eyeWhite.position.set(side * 0.065, 0.035, 0.16);
+                headGroup.add(eyeWhite);
+
+                const pupil = new THREE.Mesh(
+                    new THREE.SphereGeometry(0.015, 6, 6),
+                    eyeMat
+                );
+                pupil.position.set(side * 0.065, 0.035, 0.178);
+                headGroup.add(pupil);
+            }
+
+            // Başlık / Saç + Altın Alın Bandı (Circlet)
+            const hairHelm = new THREE.Mesh(
+                new THREE.SphereGeometry(0.19, 12, 10, 0, Math.PI * 2, 0, Math.PI * 0.62),
+                role === 'player' ? MATS.hairBlack : accentMat
+            );
+            hairHelm.rotation.x = -0.18;
+            hairHelm.position.y = 0.02;
+            headGroup.add(hairHelm);
+
+            const headband = new THREE.Mesh(
+                new THREE.TorusGeometry(0.175, 0.018, 6, 16),
+                MATS.divineGold
+            );
+            headband.rotation.x = Math.PI / 2 - 0.12;
+            headband.position.y = 0.06;
+            headGroup.add(headband);
+
+            // Mısır Nemes Yan Kanatları
+            if (role !== 'player') {
+                const nemesFlaps = new THREE.Mesh(
+                    new THREE.CylinderGeometry(0.20, 0.25, 0.28, 10, 1, true, Math.PI * 0.25, Math.PI * 1.5),
+                    accentMat
+                );
+                nemesFlaps.position.set(0, -0.04, -0.02);
+                headGroup.add(nemesFlaps);
+            }
+
+            // TANRI FORMU ZIRH VE MİĞFER EKLENTİLERİ (Horus Şahin / Set Çakal / Apis Boğa)
+            const divineArmorGroup = new THREE.Group();
+            divineArmorGroup.visible = (role === 'set_boss' || role === 'anubis');
+            headGroup.add(divineArmorGroup);
+
+            const helmSnout = new THREE.Mesh(
+                new THREE.ConeGeometry(0.11, 0.34, 8),
+                role === 'set_boss' ? MATS.darkArmorSet : MATS.divineGold
+            );
+            helmSnout.rotation.x = Math.PI * 0.48;
+            helmSnout.position.set(0, 0.02, 0.25);
+            divineArmorGroup.add(helmSnout);
+
+            const leftHornEar = new THREE.Mesh(
+                new THREE.ConeGeometry(0.055, 0.38, 6),
+                role === 'set_boss' ? MATS.darkArmorSet : MATS.divineGold
+            );
+            leftHornEar.position.set(-0.12, 0.28, -0.02);
+            leftHornEar.rotation.z = 0.22;
+            divineArmorGroup.add(leftHornEar);
+
+            const rightHornEar = leftHornEar.clone();
+            rightHornEar.position.x = 0.12;
+            rightHornEar.rotation.z = -0.22;
+            divineArmorGroup.add(rightHornEar);
+
+            // HORUS / SET AÇILIR TÜYLÜ ALTIN KANATLAR
+            const wingsGroup = new THREE.Group();
+            wingsGroup.position.set(0, 0.26, -0.18);
+            wingsGroup.visible = (role === 'set_boss');
+            chestGroup.add(wingsGroup);
+
+            const leftWingPivot = new THREE.Group();
+            const rightWingPivot = new THREE.Group();
+            wingsGroup.add(leftWingPivot, rightWingPivot);
+
+            for (let side of [-1, 1]) {
+                const pivot = side === -1 ? leftWingPivot : rightWingPivot;
+                const wingArm = new THREE.Mesh(
+                    new THREE.BoxGeometry(0.95, 0.08, 0.06),
+                    MATS.divineGold
+                );
+                wingArm.position.set(side * 0.48, 0.15, 0);
+                wingArm.rotation.z = side * 0.28;
+                pivot.add(wingArm);
+
+                for (let f = 0; f < 7; f++) {
+                    const feather = new THREE.Mesh(
+                        new THREE.BoxGeometry(0.09, 0.68 + f * 0.07, 0.02),
+                        f % 2 === 0 ? MATS.divineGold : MATS.lapisBlue
+                    );
+                    feather.position.set(side * (0.18 + f * 0.13), -0.12 + f * 0.02, -0.02);
+                    feather.rotation.z = side * (0.15 + f * 0.07);
+                    pivot.add(feather);
+                }
+            }
+
+            // KOLLAR (Doğal Omuz Geçişi, Pazı, Dirsek, Altın Kolluk Zırhı, El)
+            function buildArm(side) {
+                const shoulderPivot = new THREE.Group();
+                // Omuzları göğüs kafesine daha organik yerleştirdik (top gibi dışarı taşmaz)
+                shoulderPivot.position.set(side * 0.33, 0.33, 0);
+                chestGroup.add(shoulderPivot);
+
+                // Omuz Kası + Altın Omuzluk Bandı
+                const deltoid = new THREE.Mesh(
+                    new THREE.SphereGeometry(0.095, 10, 8),
+                    skinMat
+                );
+                deltoid.scale.set(0.88, 1.12, 0.88);
+                shoulderPivot.add(deltoid);
+
+                const armBand = new THREE.Mesh(
+                    new THREE.TorusGeometry(0.082, 0.016, 6, 12),
+                    accentMat
+                );
+                armBand.rotation.x = Math.PI / 2;
+                armBand.position.y = -0.12;
+                shoulderPivot.add(armBand);
+
+                // Üst Kol (Bicep/Tricep)
+                const upperArm = new THREE.Mesh(
+                    new THREE.CylinderGeometry(0.082, 0.068, 0.32, 10),
+                    skinMat
+                );
+                upperArm.position.y = -0.17;
+                shoulderPivot.add(upperArm);
+
+                // Dirsek Eklemi
+                const elbowPivot = new THREE.Group();
+                elbowPivot.position.y = -0.33;
+                shoulderPivot.add(elbowPivot);
+
+                // Önkol (Forearm) + Mısır Kraliyet Bilekliği (Bracer)
+                const forearm = new THREE.Mesh(
+                    new THREE.CylinderGeometry(0.068, 0.052, 0.30, 10),
+                    skinMat
+                );
+                forearm.position.y = -0.15;
+                elbowPivot.add(forearm);
+
+                const bracer = new THREE.Mesh(
+                    new THREE.CylinderGeometry(0.072, 0.058, 0.16, 10),
+                    accentMat
+                );
+                bracer.position.y = -0.19;
+                elbowPivot.add(bracer);
+
+                // El
+                const handGroup = new THREE.Group();
+                handGroup.position.y = -0.32;
+                elbowPivot.add(handGroup);
+
+                const palm = new THREE.Mesh(
+                    new THREE.BoxGeometry(0.075, 0.11, 0.05),
+                    skinMat
+                );
+                palm.position.y = -0.02;
+                handGroup.add(palm);
+
+                return { shoulderPivot, elbowPivot, handGroup };
+            }
+
+            const leftArm = buildArm(-1);
+            const rightArm = buildArm(1);
+
+            // Sol Ele Mısır Aslan/Güneş Kalkanı (Sadece Kahraman ve Tanrı için)
+            if (role === 'player') {
+                const buckler = new THREE.Mesh(
+                    new THREE.CylinderGeometry(0.24, 0.24, 0.03, 12),
+                    MATS.divineGold
+                );
+                buckler.rotation.z = Math.PI / 2;
+                buckler.position.set(-0.08, 0.14, 0);
+                leftArm.elbowPivot.add(buckler);
+            }
+
+            // Sağ Ele Silah (Khopesh Kılıcı ve 3D Kılıç Savurma İzi - Slash Trail)
+            const weaponGroup = new THREE.Group();
+            rightArm.handGroup.add(weaponGroup);
+
+            const hilt = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.022, 0.026, 0.24, 8),
+                MATS.divineGold
+            );
+            hilt.rotation.x = Math.PI / 2;
+            weaponGroup.add(hilt);
+
+            const bladeBase = new THREE.Mesh(
+                new THREE.BoxGeometry(0.025, 0.065, 0.48),
+                MATS.steelBlade
+            );
+            bladeBase.position.set(0, 0, 0.32);
+            weaponGroup.add(bladeBase);
+
+            const khopeshCurve = new THREE.Mesh(
+                new THREE.TorusGeometry(0.19, 0.028, 6, 14, Math.PI * 0.85),
+                MATS.divineGold
+            );
+            khopeshCurve.rotation.y = Math.PI / 2;
+            khopeshCurve.position.set(0, 0.08, 0.60);
+            weaponGroup.add(khopeshCurve);
+
+            // Kılıç Savurma İzi (Slash Arc Mesh)
+            const slashTrail = new THREE.Mesh(
+                new THREE.RingGeometry(0.45, 0.95, 16, 1, 0, Math.PI * 0.85),
+                new THREE.MeshBasicMaterial({ color: 0xffe066, side: THREE.DoubleSide, transparent: true, opacity: 0.0 })
+            );
+            slashTrail.rotation.y = Math.PI / 2;
+            slashTrail.position.set(0, 0, 0.45);
+            weaponGroup.add(slashTrail);
+
+            // BACAKLAR (Kalça Eklemi, Kaslı Uyluk, Altın Dizlik, Baldır, Mısır Sandaleti)
+            function buildLeg(side) {
+                const hipSocket = new THREE.Group();
+                hipSocket.position.set(side * 0.135, -0.08, 0);
+                hipGroup.add(hipSocket);
+
+                const thigh = new THREE.Mesh(
+                    new THREE.CylinderGeometry(0.12, 0.088, 0.45, 10),
+                    skinMat
+                );
+                thigh.position.y = -0.22;
+                hipSocket.add(thigh);
+
+                const kneePivot = new THREE.Group();
+                kneePivot.position.y = -0.45;
+                hipSocket.add(kneePivot);
+
+                const kneeCap = new THREE.Mesh(
+                    new THREE.SphereGeometry(0.082, 8, 8),
+                    accentMat
+                );
+                kneePivot.add(kneeCap);
+
+                const calf = new THREE.Mesh(
+                    new THREE.CylinderGeometry(0.086, 0.058, 0.45, 10),
+                    skinMat
+                );
+                calf.position.y = -0.22;
+                kneePivot.add(calf);
+
+                // Baldır Altın Sargısı (Greaves)
+                const greave = new THREE.Mesh(
+                    new THREE.CylinderGeometry(0.078, 0.062, 0.22, 10),
+                    accentMat
+                );
+                greave.position.y = -0.28;
+                kneePivot.add(greave);
+
+                const anklePivot = new THREE.Group();
+                anklePivot.position.y = -0.45;
+                kneePivot.add(anklePivot);
+
+                const foot = new THREE.Mesh(
+                    new THREE.BoxGeometry(0.105, 0.065, 0.23),
+                    skinMat
+                );
+                foot.position.set(0, -0.02, 0.05);
+                anklePivot.add(foot);
+
+                const sandalSole = new THREE.Mesh(
+                    new THREE.BoxGeometry(0.115, 0.025, 0.25),
+                    accentMat
+                );
+                sandalSole.position.set(0, -0.055, 0.05);
+                anklePivot.add(sandalSole);
+
+                return { hipSocket, kneePivot, anklePivot };
+            }
+
+            const leftLeg = buildLeg(-1);
+            const rightLeg = buildLeg(1);
+
+            root.userData.rig = {
+                hipGroup,
+                spineGroup,
+                chestGroup,
+                headGroup,
+                capePivot,
+                leftArm,
+                rightArm,
+                leftLeg,
+                rightLeg,
+                sashApron,
+                divineArmorGroup,
+                wingsGroup,
+                leftWingPivot,
+                rightWingPivot,
+                weaponGroup,
+                bladeBase,
+                khopeshCurve,
+                slashTrail,
+                helmSnout,
+                leftHornEar,
+                rightHornEar
+            };
+
+            return root;
+        }
+
+        // İNSAN & TANRI İSKELET ANİMASYON SÜRÜCÜSÜ (Akıcı Koşma, Pelerin Dalgalanması ve 3'lü Kılıç Kombosu)
+        function animateHumanoidRig(character, dt, time, state) {
+            const rig = character.userData.rig;
+            if (!rig) return;
+
+            const { speed = 0, attackTimer = 0, comboStage = 0, dodgeTimer = 0, isCarrying = false, isGod = false, isMounted = false } = state;
+
+            character.userData.walkPhase = (character.userData.walkPhase || 0) + dt * (speed > 0.1 ? speed * 2.05 : 2.2);
+            const p = character.userData.walkPhase;
+
+            if (isMounted) {
+                // Khepri Bineği Üzerinde Sürüş Duruşu
+                rig.leftLeg.hipSocket.rotation.x = -0.85;
+                rig.rightLeg.hipSocket.rotation.x = -0.85;
+                rig.leftLeg.hipSocket.rotation.z = -0.35;
+                rig.rightLeg.hipSocket.rotation.z = 0.35;
+                rig.leftLeg.kneePivot.rotation.x = 1.15;
+                rig.rightLeg.kneePivot.rotation.x = 1.15;
+                rig.hipGroup.position.y = 0.92 + Math.sin(time * 8) * 0.03;
+                rig.spineGroup.rotation.x = 0.15;
+                rig.leftArm.shoulderPivot.rotation.x = -0.65;
+                rig.leftArm.elbowPivot.rotation.x = -0.55;
+            } else if (speed > 0.15) {
+                // Gerçekçi Atletik İnsan Koşma Kinematiği
+                const stride = Math.min(1.0, speed / 7.2);
+                rig.leftLeg.hipSocket.rotation.z = 0;
+                rig.rightLeg.hipSocket.rotation.z = 0;
+                rig.leftLeg.hipSocket.rotation.x = Math.sin(p) * 0.82 * stride;
+                rig.rightLeg.hipSocket.rotation.x = Math.sin(p + Math.PI) * 0.82 * stride;
+
+                rig.leftLeg.kneePivot.rotation.x = Math.max(0, Math.sin(p - 1.1)) * 1.18 * stride;
+                rig.rightLeg.kneePivot.rotation.x = Math.max(0, Math.sin(p + Math.PI - 1.1)) * 1.18 * stride;
+
+                rig.leftLeg.anklePivot.rotation.x = Math.cos(p) * 0.28 * stride;
+                rig.rightLeg.anklePivot.rotation.x = Math.cos(p + Math.PI) * 0.28 * stride;
+
+                // Kalça, Omurga ve Pelerin Dinamiği
+                rig.hipGroup.position.y = 1.05 + Math.abs(Math.sin(p)) * 0.085 * stride;
+                rig.hipGroup.rotation.y = Math.sin(p) * 0.16 * stride;
+                rig.spineGroup.rotation.y = -Math.sin(p) * 0.20 * stride;
+                rig.spineGroup.rotation.x = 0.12 * stride;
+
+                if (rig.capePivot) {
+                    rig.capePivot.rotation.x = 0.28 * stride + Math.abs(Math.sin(p)) * 0.22;
+                    rig.capePivot.rotation.y = Math.cos(p) * 0.12;
+                }
+
+                if (isCarrying) {
+                    rig.leftArm.shoulderPivot.rotation.x = -1.4;
+                    rig.leftArm.elbowPivot.rotation.x = -1.2;
+                    rig.rightArm.shoulderPivot.rotation.x = -1.4;
+                    rig.rightArm.elbowPivot.rotation.x = -1.2;
+                } else {
+                    rig.leftArm.shoulderPivot.rotation.x = Math.sin(p + Math.PI) * 0.72 * stride;
+                    rig.leftArm.shoulderPivot.rotation.z = 0.08;
+                    rig.leftArm.elbowPivot.rotation.x = -0.42 - Math.max(0, Math.sin(p + Math.PI)) * 0.45;
+                    if (attackTimer <= 0) {
+                        rig.rightArm.shoulderPivot.rotation.x = Math.sin(p) * 0.72 * stride;
+                        rig.rightArm.shoulderPivot.rotation.z = -0.08;
+                        rig.rightArm.elbowPivot.rotation.x = -0.42 - Math.max(0, Math.sin(p)) * 0.45;
+                    }
+                }
+                rig.sashApron.rotation.x = -0.15 - Math.abs(Math.sin(p)) * 0.28;
+            } else {
+                // Canlı Nefes Alma ve Savaş Duruşu (Idle)
+                rig.leftLeg.hipSocket.rotation.x *= 0.85;
+                rig.rightLeg.hipSocket.rotation.x *= 0.85;
+                rig.leftLeg.hipSocket.rotation.z = 0;
+                rig.rightLeg.hipSocket.rotation.z = 0;
+                rig.leftLeg.kneePivot.rotation.x *= 0.85;
+                rig.rightLeg.kneePivot.rotation.x *= 0.85;
+                rig.hipGroup.position.y = 1.05 + Math.sin(time * 2.6) * 0.018;
+                rig.spineGroup.rotation.x = Math.sin(time * 2.6) * 0.035;
+                rig.spineGroup.rotation.y = Math.sin(time * 1.3) * 0.05;
+                rig.headGroup.rotation.y = Math.sin(time * 0.9) * 0.12;
+
+                if (rig.capePivot) {
+                    rig.capePivot.rotation.x = 0.06 + Math.sin(time * 2.2) * 0.05;
+                }
+
+                rig.leftArm.shoulderPivot.rotation.x = -0.15 + Math.sin(time * 2.2) * 0.06;
+                rig.leftArm.shoulderPivot.rotation.z = 0.10;
+                rig.leftArm.elbowPivot.rotation.x = -0.35;
+                if (attackTimer <= 0) {
+                    rig.rightArm.shoulderPivot.rotation.x = -0.18 + Math.cos(time * 2.2) * 0.06;
+                    rig.rightArm.shoulderPivot.rotation.z = -0.10;
+                    rig.rightArm.elbowPivot.rotation.x = -0.42;
+                }
+            }
+
+            // 3'lü Kılıç Kombo Savurma Animasyonu + Parlayan Kılıç İzi (Slash Trail)
+            if (attackTimer > 0) {
+                const swing = Math.sin((1 - attackTimer / 0.42) * Math.PI);
+                if (rig.slashTrail) rig.slashTrail.material.opacity = swing * 0.85;
+
+                if (comboStage % 3 === 1) {
+                    // 1. Yatay Biçme
+                    rig.spineGroup.rotation.y = -0.55 + swing * 1.15;
+                    rig.rightArm.shoulderPivot.rotation.x = -1.6 + swing * 1.8;
+                    rig.rightArm.shoulderPivot.rotation.z = -0.6 + swing * 0.8;
+                    rig.rightArm.elbowPivot.rotation.x = -0.5;
+                } else if (comboStage % 3 === 2) {
+                    // 2. Ters Çapraz Kesme
+                    rig.spineGroup.rotation.y = 0.55 - swing * 1.25;
+                    rig.rightArm.shoulderPivot.rotation.x = -1.9 + swing * 2.2;
+                    rig.rightArm.shoulderPivot.rotation.z = -0.2;
+                    rig.rightArm.elbowPivot.rotation.x = -0.3;
+                } else {
+                    // 3. Ağır İlahi Yukarıdan Darbe
+                    rig.spineGroup.rotation.x = -0.25 + swing * 0.65;
+                    rig.rightArm.shoulderPivot.rotation.x = -2.6 + swing * 3.1;
+                    rig.rightArm.shoulderPivot.rotation.z = -0.1;
+                    rig.rightArm.elbowPivot.rotation.x = -0.2;
+                }
+            } else if (rig.slashTrail) {
+                rig.slashTrail.material.opacity = 0;
+            }
+
+            // Takla / Tuzaklardan Kaçış Animasyonu
+            if (dodgeTimer > 0) {
+                const rollProgress = (0.48 - dodgeTimer) / 0.48;
+                rig.hipGroup.rotation.x = rollProgress * Math.PI * 2;
+                rig.hipGroup.position.y = 0.72;
+            } else {
+                rig.hipGroup.rotation.x = 0;
+            }
+
+            // Tanrı Modu Kanat Çırpma Animasyonu
+            if (rig.wingsGroup.visible || isGod) {
+                const flap = Math.sin(time * 5.5) * 0.42;
+                rig.leftWingPivot.rotation.y = 0.25 + flap;
+                rig.rightWingPivot.rotation.y = -0.25 - flap;
+            }
+        }
+
+        /********************************************************************
+         * 4. VAHŞİ HAYVAN MODELLERİ (TİMSAH, DEV AKREP, ÇÖL SIRTLANI)
+         ********************************************************************/
+        function createWildBeast(type) {
+            const beast = new THREE.Group();
+            beast.userData.type = type;
+
+            if (type === 'crocodile') {
+                const scaleMat = new THREE.MeshStandardMaterial({ color: 0x365327, roughness: 0.7 });
+                const body = new THREE.Mesh(new THREE.BoxGeometry(0.75, 0.35, 2.1), scaleMat);
+                body.position.y = 0.28;
+                body.castShadow = true;
+                beast.add(body);
+
+                const head = new THREE.Mesh(new THREE.ConeGeometry(0.36, 1.05, 6), scaleMat);
+                head.rotation.x = Math.PI / 2;
+                head.position.set(0, 0.3, 1.45);
+                beast.add(head);
+
+                const tailPivot = new THREE.Group();
+                tailPivot.position.set(0, 0.28, -1.0);
+                const tail = new THREE.Mesh(new THREE.ConeGeometry(0.32, 1.6, 6), scaleMat);
+                tail.rotation.x = -Math.PI / 2;
+                tail.position.z = -0.75;
+                tailPivot.add(tail);
+                beast.add(tailPivot);
+                beast.userData.tailPivot = tailPivot;
+                beast.userData.hp = 60;
+                beast.userData.maxHp = 60;
+                beast.userData.label = 'Nil Timsahı';
+            } else if (type === 'scorpion') {
+                const chitinMat = new THREE.MeshStandardMaterial({ color: 0x2a1810, roughness: 0.35, metalness: 0.5 });
+                const body = new THREE.Mesh(new THREE.SphereGeometry(0.55, 12, 10), chitinMat);
+                body.scale.set(1, 0.55, 1.45);
+                body.position.y = 0.45;
+                body.castShadow = true;
+                beast.add(body);
+
+                // Kıskaçlar ve Zehirli Kuyruk
+                const tailPivot = new THREE.Group();
+                tailPivot.position.set(0, 0.55, -0.6);
+                for (let i = 0; i < 5; i++) {
+                    const seg = new THREE.Mesh(new THREE.SphereGeometry(0.18 - i * 0.02, 8, 8), chitinMat);
+                    seg.position.set(0, i * 0.26, -i * 0.1 + (i > 2 ? (i - 2) * 0.25 : 0));
+                    tailPivot.add(seg);
+                }
+                const stinger = new THREE.Mesh(new THREE.ConeGeometry(0.12, 0.38, 8), MATS.turquoiseGlow);
+                stinger.position.set(0, 1.25, 0.15);
+                stinger.rotation.x = Math.PI * 0.65;
+                tailPivot.add(stinger);
+                beast.add(tailPivot);
+
+                for (let s of [-1, 1]) {
+                    const pincer = new THREE.Mesh(new THREE.TorusGeometry(0.24, 0.07, 8, 12, Math.PI * 1.3), chitinMat);
+                    pincer.rotation.x = Math.PI / 2;
+                    pincer.position.set(s * 0.55, 0.45, 0.85);
+                    beast.add(pincer);
+                }
+                beast.userData.tailPivot = tailPivot;
+                beast.userData.hp = 85;
+                beast.userData.maxHp = 85;
+                beast.userData.label = 'Dev Çöl Akrebi';
+            } else {
+                // Çöl Sırtlanı
+                const furMat = new THREE.MeshStandardMaterial({ color: 0x8a6d46, roughness: 0.8 });
+                const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.34, 1.15, 10), furMat);
+                torso.rotation.x = Math.PI / 2;
+                torso.position.y = 0.68;
+                torso.castShadow = true;
+                beast.add(torso);
+
+                const head = new THREE.Mesh(new THREE.ConeGeometry(0.24, 0.55, 8), furMat);
+                head.rotation.x = Math.PI * 0.45;
+                head.position.set(0, 0.92, 0.68);
+                beast.add(head);
+                beast.userData.hp = 50;
+                beast.userData.maxHp = 50;
+                beast.userData.label = 'Çöl Sırtlanı';
+            }
+            return beast;
+        }
+
+        /********************************************************************
+         * 5. DÜNYA İNŞASI: NİL NEHRİ, TARLALAR, MADENLER, DİKİLİTAŞ,
+         *    TUZAKLI TAPINAK, RA'NIN GÜNEŞ GEMİSİ & APOPHIS
+         ********************************************************************/
+        const worldGroup = new THREE.Group();
+        scene.add(worldGroup);
+
+        // Çöl Zemini
+        const groundGeo = new THREE.PlaneGeometry(360, 360, 48, 48);
+        groundGeo.rotateX(-Math.PI / 2);
+        const posAttr = groundGeo.attributes.position;
+        for (let i = 0; i < posAttr.count; i++) {
+            const x = posAttr.getX(i);
+            const z = posAttr.getZ(i);
+            // Nil nehri yatağı x < -25 bölgesinde alçalır
+            if (x < -28 && x > -62) {
+                posAttr.setY(i, -1.6);
+            } else if (Math.abs(x) > 45 || Math.abs(z) > 45) {
+                posAttr.setY(i, Math.sin(x * 0.05) * Math.cos(z * 0.05) * 2.8);
+            }
+        }
+        groundGeo.computeVertexNormals();
+        const groundMesh = new THREE.Mesh(
+            groundGeo,
+            new THREE.MeshStandardMaterial({ map: sandTex, roughness: 0.88, metalness: 0.05 })
+        );
+        groundMesh.receiveShadow = true;
+        worldGroup.add(groundMesh);
+
+        // Parlayan Nil Nehri Suyu
+        const nileRiver = new THREE.Mesh(
+            new THREE.PlaneGeometry(34, 340),
+            new THREE.MeshStandardMaterial({
+                color: 0x0e6b8a,
+                roughness: 0.15,
+                metalness: 0.75,
+                transparent: true,
+                opacity: 0.88
+            })
+        );
+        nileRiver.rotation.x = -Math.PI / 2;
+        nileRiver.position.set(-45, -0.45, 0);
+        worldGroup.add(nileRiver);
+
+        // Hurma Ağaçları Üreticisi
+        function createPalmTree(x, z) {
+            const tree = new THREE.Group();
+            tree.position.set(x, 0, z);
+            const trunkMat = new THREE.MeshStandardMaterial({ color: 0x6e4928, roughness: 0.9 });
+            const leafMat = new THREE.MeshStandardMaterial({ color: 0x3b6e28, roughness: 0.65, side: THREE.DoubleSide });
+
+            const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.38, 5.2, 8), trunkMat);
+            trunk.position.y = 2.6;
+            trunk.rotation.z = (Math.random() - 0.5) * 0.14;
+            trunk.castShadow = true;
+            tree.add(trunk);
+
+            for (let i = 0; i < 7; i++) {
+                const frond = new THREE.Mesh(new THREE.ConeGeometry(0.65, 2.8, 4), leafMat);
+                frond.position.set(0, 5.1, 0);
+                frond.rotation.z = 1.1;
+                const holder = new THREE.Group();
+                holder.rotation.y = (i / 7) * Math.PI * 2;
+                holder.add(frond);
+                tree.add(holder);
+            }
+            worldGroup.add(tree);
+        }
+
+        for (let z = -70; z <= 70; z += 14) {
+            createPalmTree(-26 + Math.sin(z) * 2, z);
+            createPalmTree(-64 + Math.cos(z) * 2, z);
+        }
+
+        // Etkileşimli Kaynak Noktaları (Buğday/Papirüs Tarlaları ve Altın/Bakır Maden Kayaları)
+        const resourceNodes = [];
+
+        function createWheatPatch(x, z) {
+            const group = new THREE.Group();
+            group.position.set(x, 0, z);
+            const stalkMat = new THREE.MeshStandardMaterial({ color: 0xe6be46, roughness: 0.6 });
+            for (let i = 0; i < 14; i++) {
+                const stalk = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.06, 1.35, 5), stalkMat);
+                stalk.position.set((Math.random() - 0.5) * 2.2, 0.65, (Math.random() - 0.5) * 2.2);
+                group.add(stalk);
+            }
+            group.userData = { nodeType: 'wheat', cooldown: 0, label: 'Nil Buğdayı & Papirüs' };
+            worldGroup.add(group);
+            resourceNodes.push(group);
+        }
+
+        for (let z = -32; z <= 32; z += 10) {
+            createWheatPatch(-21, z);
+        }
+
+        // B. THREE.JS MOBİL MMORPG TEKNİK MİMARİSİ: GPU INSTANCEDMESH OPTİMİZASYONU
+        // Yüzlerce Nil Papirüs kamışını ve çöl taşını tek bir Draw-Call (GPU Instancing) ile 60 FPS çiziyoruz
+        const papyrusCount = 240;
+        const papyrusGeo = new THREE.CylinderGeometry(0.035, 0.07, 2.1, 5);
+        papyrusGeo.translate(0, 1.05, 0);
+        const papyrusMat = new THREE.MeshStandardMaterial({ color: 0x4c7c29, roughness: 0.65 });
+        const papyrusInstanced = new THREE.InstancedMesh(papyrusGeo, papyrusMat, papyrusCount);
+        papyrusInstanced.castShadow = true;
+        const dummyMatrix = new THREE.Object3D();
+        for (let i = 0; i < papyrusCount; i++) {
+            const side = i % 2 === 0 ? -27.5 : -61.5;
+            const px = side + (Math.random() - 0.5) * 3.8;
+            const pz = -95 + (i / papyrusCount) * 190 + (Math.random() - 0.5) * 2.5;
+            dummyMatrix.position.set(px, -0.25, pz);
+            dummyMatrix.rotation.set((Math.random() - 0.5) * 0.25, Math.random() * Math.PI, (Math.random() - 0.5) * 0.25);
+            const sc = 0.75 + Math.random() * 0.65;
+            dummyMatrix.scale.set(sc, sc, sc);
+            dummyMatrix.updateMatrix();
+            papyrusInstanced.setMatrixAt(i, dummyMatrix.matrix);
+        }
+        worldGroup.add(papyrusInstanced);
+
+        // FİLMDEKİ DEV SFENKS MUHAFIZI (Tuzaklı Tapınak Girişini Koruyan Eklemli Sfenks)
+        const sphinxGuardian = new THREE.Group();
+        sphinxGuardian.position.set(0, 0, 29);
+        worldGroup.add(sphinxGuardian);
+
+        const sphinxBody = new THREE.Mesh(new THREE.BoxGeometry(3.4, 2.2, 5.6), MATS.stoneHiero);
+        sphinxBody.position.set(0, 1.1, 0);
+        sphinxBody.castShadow = true;
+        sphinxGuardian.add(sphinxBody);
+
+        // Sfenks Ön Aslan Pençeleri
+        for (let s of [-1, 1]) {
+            const paw = new THREE.Mesh(new THREE.BoxGeometry(0.95, 0.8, 2.8), MATS.stoneHiero);
+            paw.position.set(s * 1.25, 0.4, -3.4);
+            sphinxGuardian.add(paw);
+        }
+
+        // Sfenks Nemes Başlığı ve İnsan/Aslan Yüzü
+        const sphinxHeadGroup = new THREE.Group();
+        sphinxHeadGroup.position.set(0, 3.1, -2.1);
+        sphinxGuardian.add(sphinxHeadGroup);
+
+        const sphinxNemes = new THREE.Mesh(new THREE.ConeGeometry(1.85, 2.4, 6), MATS.divineGold);
+        sphinxNemes.position.y = 0.2;
+        sphinxHeadGroup.add(sphinxNemes);
+
+        const sphinxFace = new THREE.Mesh(new THREE.SphereGeometry(1.05, 14, 14), MATS.stoneHiero);
+        sphinxFace.position.set(0, 0, -0.35);
+        sphinxHeadGroup.add(sphinxFace);
+
+        for (let s of [-1, 1]) {
+            const sEye = new THREE.Mesh(new THREE.SphereGeometry(0.16, 8, 8), MATS.turquoiseGlow);
+            sEye.position.set(s * 0.38, 0.15, -1.28);
+            sphinxHeadGroup.add(sEye);
+        }
+
+        // Tapınak Girişi Enerji Bariyeri (Sfenks bilmecesi çözülünce açılır)
+        const sphinxGateBarrier = new THREE.Mesh(
+            new THREE.PlaneGeometry(12, 8),
+            new THREE.MeshBasicMaterial({ color: 0x00e5ff, transparent: true, opacity: 0.38, side: THREE.DoubleSide })
+        );
+        sphinxGateBarrier.position.set(0, 4, 34);
+        worldGroup.add(sphinxGateBarrier);
+
+        // KHEPRI KRALİYET ZIRHLI ALTIN BOKBÖCEĞİ (SCARAB) BİNEĞİ (Eklemli Bacaklar, Açılır Kanat Kabuğu ve Taht Eyer)
+        const scarabMount = new THREE.Group();
+        scarabMount.position.set(-14, 0, -5);
+        scene.add(scarabMount);
+
+        // Alt Gövde (Chitin Thorax)
+        const scarabUnderbody = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.85, 0.75, 1.9, 12),
+            MATS.darkArmorSet
+        );
+        scarabUnderbody.rotation.x = Math.PI / 2;
+        scarabUnderbody.position.y = 0.58;
+        scarabUnderbody.castShadow = true;
+        scarabMount.add(scarabUnderbody);
+
+        // Çift Parçalı Oyma Altın Kanat Kabukları (Sol & Sağ Elytra)
+        for (let side of [-1, 1]) {
+            const wingCase = new THREE.Mesh(
+                new THREE.SphereGeometry(0.95, 14, 12, 0, Math.PI, 0, Math.PI * 0.55),
+                MATS.divineGold
+            );
+            wingCase.scale.set(0.58, 0.68, 1.25);
+            wingCase.position.set(side * 0.22, 0.78, -0.18);
+            wingCase.rotation.z = side * -0.12;
+            scarabMount.add(wingCase);
+
+            // Lapis Lazuli Kabuk İşlemesi
+            const trimLine = new THREE.Mesh(
+                new THREE.BoxGeometry(0.08, 0.14, 1.35),
+                MATS.lapisBlue
+            );
+            trimLine.position.set(side * 0.42, 0.98, -0.18);
+            scarabMount.add(trimLine);
+        }
+
+        // Ön Göğüs Zırhı (Pronotum Shield) ve Turkuaz İlahi Rün
+        const pronotumShield = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.72, 0.92, 0.65, 10),
+            MATS.divineGold
+        );
+        pronotumShield.rotation.x = Math.PI * 0.42;
+        pronotumShield.position.set(0, 0.85, 0.85);
+        scarabMount.add(pronotumShield);
+
+        const scarabRune = new THREE.Mesh(
+            new THREE.OctahedronGeometry(0.22, 0),
+            MATS.turquoiseGlow
+        );
+        scarabRune.position.set(0, 1.12, 0.82);
+        scarabMount.add(scarabRune);
+
+        // Boynuzlu Böcek Başı ve Kıskaç Çeneler (Mandibles)
+        const scarabHead = new THREE.Mesh(new THREE.BoxGeometry(0.68, 0.42, 0.58), MATS.darkArmorSet);
+        scarabHead.position.set(0, 0.68, 1.32);
+        scarabMount.add(scarabHead);
+
+        const rhinoHorn = new THREE.Mesh(new THREE.ConeGeometry(0.14, 0.68, 6), MATS.divineGold);
+        rhinoHorn.rotation.x = Math.PI * 0.28;
+        rhinoHorn.position.set(0, 1.02, 1.55);
+        scarabMount.add(rhinoHorn);
+
+        for (let side of [-1, 1]) {
+            const mandible = new THREE.Mesh(new THREE.TorusGeometry(0.22, 0.05, 6, 10, Math.PI * 0.85), MATS.divineGold);
+            mandible.rotation.x = Math.PI / 2;
+            mandible.position.set(side * 0.24, 0.62, 1.58);
+            scarabMount.add(mandible);
+        }
+
+        // Kraliyet Binek Eyeri ve Sırt Tahtı (Saddle & Backrest)
+        const saddlePad = new THREE.Mesh(new THREE.BoxGeometry(0.75, 0.14, 0.78), MATS.linenCrimson);
+        saddlePad.position.set(0, 1.26, -0.05);
+        scarabMount.add(saddlePad);
+
+        const saddleBackrest = new THREE.Mesh(new THREE.BoxGeometry(0.68, 0.45, 0.10), MATS.divineGold);
+        saddleBackrest.position.set(0, 1.48, -0.42);
+        saddleBackrest.rotation.x = -0.22;
+        scarabMount.add(saddleBackrest);
+
+        // 6 Adet Çift Eklemli Zırhlı Böcek Bacağı (Femur + Tibia Pençesi)
+        const scarabLegs = [];
+        for (let side of [-1, 1]) {
+            for (let l = -1; l <= 1; l++) {
+                const legPivot = new THREE.Group();
+                legPivot.position.set(side * 0.78, 0.55, l * 0.58);
+
+                const femur = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.06, 0.55, 6), MATS.divineGold);
+                femur.rotation.z = side * -1.05;
+                femur.position.set(side * 0.22, 0.10, 0);
+                legPivot.add(femur);
+
+                const tibia = new THREE.Mesh(new THREE.ConeGeometry(0.075, 0.72, 6), MATS.darkArmorSet);
+                tibia.rotation.z = side * 2.75;
+                tibia.position.set(side * 0.52, -0.22, 0);
+                legPivot.add(tibia);
+
+                scarabMount.add(legPivot);
+                scarabLegs.push({ mesh: legPivot, side, index: l });
+            }
+        }
+
+        // ANTİK MISIR UFUK PİRAMİTLERİ, KARNAK PİLON KAPISI VE NİL KÖYÜ EVLERİ
+        function buildWorldMonumentsAndVillage() {
+            // 1. Ufuktaki Devasa Giza Piramitleri (3 Büyük Piramit)
+            const pyramidCoords = [
+                { x: -95, z: -115, size: 46, h: 38 },
+                { x: -35, z: -130, size: 58, h: 48 },
+                { x: 35, z: -120, size: 42, h: 34 }
+            ];
+            pyramidCoords.forEach(p => {
+                const pyr = new THREE.Mesh(
+                    new THREE.ConeGeometry(p.size, p.h, 4),
+                    MATS.stoneHiero
+                );
+                pyr.position.set(p.x, p.h / 2 - 1, p.z);
+                pyr.rotation.y = Math.PI / 4;
+                worldGroup.add(pyr);
+
+                // Altın Piramidion Zirvesi (Parlayan Altın Tepe)
+                const cap = new THREE.Mesh(
+                    new THREE.ConeGeometry(p.size * 0.22, p.h * 0.22, 4),
+                    MATS.divineGold
+                );
+                cap.position.set(p.x, p.h * 0.89 - 1, p.z);
+                cap.rotation.y = Math.PI / 4;
+                worldGroup.add(cap);
+            });
+
+            // 2. Tuzaklı Tapınak Girişine Devasa Karnak Pilon Kapısı ve Anubis Heykelleri
+            for (let side of [-1, 1]) {
+                const pylonTower = new THREE.Mesh(
+                    new THREE.CylinderGeometry(3.2, 4.6, 14, 4),
+                    MATS.stoneHiero
+                );
+                pylonTower.rotation.y = Math.PI / 4;
+                pylonTower.position.set(side * 9.5, 7, 34);
+                pylonTower.castShadow = true;
+                worldGroup.add(pylonTower);
+
+                // Yanan Altın Ateş Çanakları (Braziers)
+                const brazier = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 0.4, 2.2, 8), MATS.divineGold);
+                brazier.position.set(side * 5.2, 1.1, 25);
+                worldGroup.add(brazier);
+
+                const flame = new THREE.Mesh(new THREE.OctahedronGeometry(0.65, 0), MATS.goldenBloodMat);
+                flame.position.set(side * 5.2, 2.5, 25);
+                worldGroup.add(flame);
+            }
+
+            // 3. Nil Kıyısı Kerpiç Köylü Evleri ve Pazar Tenteleri
+            const houseLocations = [
+                { x: -16, z: -18, rot: 0.2 },
+                { x: -15, z: 14, rot: -0.3 },
+                { x: -8, z: 22, rot: 0.5 }
+            ];
+            houseLocations.forEach(loc => {
+                const house = new THREE.Group();
+                house.position.set(loc.x, 0, loc.z);
+                house.rotation.y = loc.rot;
+
+                const walls = new THREE.Mesh(new THREE.BoxGeometry(5.2, 3.4, 4.4), MATS.stoneHiero);
+                walls.position.y = 1.7;
+                walls.castShadow = true;
+                house.add(walls);
+
+                const door = new THREE.Mesh(new THREE.BoxGeometry(1.2, 2.2, 0.2), MATS.darkArmorSet);
+                door.position.set(0, 1.1, 2.2);
+                house.add(door);
+
+                const canopy = new THREE.Mesh(new THREE.BoxGeometry(4.8, 0.15, 2.6), MATS.linenCrimson);
+                canopy.position.set(0, 3.1, 3.1);
+                canopy.rotation.x = 0.18;
+                house.add(canopy);
+
+                worldGroup.add(house);
+            });
+        }
+        buildWorldMonumentsAndVillage();
+
+        // Altın ve Taş Madeni Kayaları
+        function createGoldMineRock(x, z) {
+            const group = new THREE.Group();
+            group.position.set(x, 0, z);
+            const rock = new THREE.Mesh(
+                new THREE.DodecahedronGeometry(1.45, 0),
+                new THREE.MeshStandardMaterial({ color: 0x7c6852, roughness: 0.85 })
+            );
+            rock.position.y = 0.9;
+            rock.castShadow = true;
+            group.add(rock);
+
+            for (let i = 0; i < 4; i++) {
+                const vein = new THREE.Mesh(
+                    new THREE.OctahedronGeometry(0.42, 0),
+                    MATS.divineGold
+                );
+                vein.position.set(
+                    (Math.random() - 0.5) * 1.3,
+                    0.7 + Math.random() * 0.7,
+                    (Math.random() - 0.5) * 1.3
+                );
+                group.add(vein);
+            }
+            group.userData = { nodeType: 'mine', cooldown: 0, label: 'Altın & Taş Madeni' };
+            worldGroup.add(group);
+            resourceNodes.push(group);
+        }
+
+        createGoldMineRock(20, -18);
+        createGoldMineRock(26, -10);
+        createGoldMineRock(16, -26);
+
+        // 3D Altın Kan ve İlahi Işık Partikül Sistemi
+        const activeParticles = [];
+        const particleGeo = new THREE.OctahedronGeometry(0.14, 0);
+
+        function spawnBloodBurstParticles(originPos, count = 14, hexColor = 0xffd700) {
+            const pMat = new THREE.MeshBasicMaterial({ color: hexColor });
+            for (let i = 0; i < count; i++) {
+                const pMesh = new THREE.Mesh(particleGeo, pMat);
+                pMesh.position.set(
+                    originPos.x + (Math.random() - 0.5) * 1.2,
+                    originPos.y + 1.2 + Math.random() * 0.8,
+                    originPos.z + (Math.random() - 0.5) * 1.2
+                );
+                scene.add(pMesh);
+                activeParticles.push({
+                    mesh: pMesh,
+                    vel: new THREE.Vector3(
+                        (Math.random() - 0.5) * 8,
+                        3.5 + Math.random() * 5.5,
+                        (Math.random() - 0.5) * 8
+                    ),
+                    life: 0.75 + Math.random() * 0.35
+                });
+            }
+        }
+
+        // DEV DİKİLİTAŞ (OBELISK) İNŞAAT ALANI
+        const obeliskGroup = new THREE.Group();
+        obeliskGroup.position.set(14, 0, 0);
+        worldGroup.add(obeliskGroup);
+
+        const obeliskBase = new THREE.Mesh(
+            new THREE.BoxGeometry(5.5, 1.4, 5.5),
+            MATS.stoneHiero
+        );
+        obeliskBase.position.y = 0.7;
+        obeliskBase.castShadow = true;
+        obeliskGroup.add(obeliskBase);
+
+        const obeliskShaftGeo = new THREE.CylinderGeometry(0.95, 1.85, 18, 4);
+        obeliskShaftGeo.translate(0, 9, 0);
+        const obeliskShaft = new THREE.Mesh(obeliskShaftGeo, MATS.stoneHiero);
+        obeliskShaft.position.y = 1.4;
+        obeliskShaft.rotation.y = Math.PI / 4;
+        obeliskShaft.scale.y = 0.5 + (gameState.obeliskProgress / 100) * 0.7;
+        obeliskShaft.castShadow = true;
+        obeliskGroup.add(obeliskShaft);
+
+        const obeliskTip = new THREE.Mesh(
+            new THREE.ConeGeometry(1.35, 2.6, 4),
+            MATS.divineGold
+        );
+        obeliskTip.position.y = 19.2;
+        obeliskShaft.add(obeliskTip);
+
+        // Ra'nın Güneş Sunağı (Dua & Adak Bağış Noktası)
+        const solarAltar = new THREE.Group();
+        solarAltar.position.set(2, 0, -10);
+        worldGroup.add(solarAltar);
+
+        const altarPedestal = new THREE.Mesh(
+            new THREE.CylinderGeometry(1.6, 2.2, 1.5, 8),
+            MATS.stoneHiero
+        );
+        altarPedestal.position.y = 0.75;
+        solarAltar.add(altarPedestal);
+
+        const solarOrb = new THREE.Mesh(
+            new THREE.TorusGeometry(0.95, 0.18, 12, 24),
+            MATS.divineGold
+        );
+        solarOrb.position.y = 2.4;
+        solarAltar.add(solarOrb);
+
+        // TUZAKLI TAPINAK & HORUS'UN GÖZÜ (Anti-Tiranlık Soygun Koridoru)
+        const templeGroup = new THREE.Group();
+        templeGroup.position.set(0, 0, 36);
+        worldGroup.add(templeGroup);
+
+        const templeFloor = new THREE.Mesh(
+            new THREE.BoxGeometry(12, 0.5, 30),
+            MATS.stoneHiero
+        );
+        templeFloor.position.set(0, 0.25, 13);
+        templeFloor.receiveShadow = true;
+        templeGroup.add(templeFloor);
+
+        // Tapınak Sütunları
+        for (let z = 2; z <= 24; z += 5.5) {
+            for (let side of [-1, 1]) {
+                const col = new THREE.Mesh(
+                    new THREE.CylinderGeometry(0.75, 0.9, 9.5, 10),
+                    MATS.stoneHiero
+                );
+                col.position.set(side * 4.8, 4.75, z);
+                col.castShadow = true;
+                templeGroup.add(col);
+            }
+        }
+
+        // Sallanan Giyotin Sarkaç Tuzakları
+        const pendulumTraps = [];
+        for (let i = 0; i < 3; i++) {
+            const pivot = new THREE.Group();
+            pivot.position.set(0, 9.5, 6 + i * 6.5);
+            pivot.userData.phaseOffset = i * 1.35;
+
+            const rod = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.08, 0.08, 6.8, 8),
+                MATS.darkArmorSet
+            );
+            rod.position.y = -3.4;
+            pivot.add(rod);
+
+            const axeBlade = new THREE.Mesh(
+                new THREE.CylinderGeometry(1.65, 1.65, 0.14, 16, 1, false, 0, Math.PI),
+                MATS.steelBlade
+            );
+            axeBlade.rotation.z = Math.PI / 2;
+            axeBlade.rotation.y = Math.PI / 2;
+            axeBlade.position.y = -6.8;
+            pivot.add(axeBlade);
+
+            templeGroup.add(pivot);
+            pendulumTraps.push(pivot);
+        }
+
+        // Tapınak Sonundaki Horus'un Gözü Sunağı
+        const eyePedestal = new THREE.Mesh(
+            new THREE.CylinderGeometry(1.1, 1.5, 1.8, 8),
+            MATS.divineGold
+        );
+        eyePedestal.position.set(0, 0.9, 25);
+        templeGroup.add(eyePedestal);
+
+        const eyeOfHorusMesh = new THREE.Group();
+        eyeOfHorusMesh.position.set(0, 2.75, 25);
+        const eyeOuterRing = new THREE.Mesh(
+            new THREE.TorusGeometry(0.65, 0.12, 10, 20),
+            MATS.divineGold
+        );
+        eyeOfHorusMesh.add(eyeOuterRing);
+        const eyeCore = new THREE.Mesh(
+            new THREE.OctahedronGeometry(0.42, 1),
+            MATS.turquoiseGlow
+        );
+        eyeOfHorusMesh.add(eyeCore);
+        templeGroup.add(eyeOfHorusMesh);
+
+        // GÖKYÜZÜNDE RA'NIN GÜNEŞ GEMİSİ (SOLAR BARQUE) & KAOS YILANI APOPHIS
+        const skyEventGroup = new THREE.Group();
+        skyEventGroup.position.set(0, 44, -40);
+        scene.add(skyEventGroup);
+
+        const solarBarque = new THREE.Group();
+        const hull = new THREE.Mesh(
+            new THREE.CylinderGeometry(1.4, 3.8, 16, 8),
+            MATS.divineGold
+        );
+        hull.rotation.z = Math.PI / 2;
+        hull.scale.set(1, 1, 0.45);
+        solarBarque.add(hull);
+
+        const sunDisc = new THREE.Mesh(
+            new THREE.SphereGeometry(3.2, 16, 16),
+            new THREE.MeshBasicMaterial({ color: 0xfff099 })
+        );
+        sunDisc.position.y = 3.6;
+        solarBarque.add(sunDisc);
+        skyEventGroup.add(solarBarque);
+
+        const apophisGroup = new THREE.Group();
+        apophisGroup.visible = false;
+        const apophisSegments = [];
+        const apophisMat = new THREE.MeshStandardMaterial({
+            color: 0x1a0826,
+            emissive: 0x6b00b3,
+            emissiveIntensity: 0.6,
+            roughness: 0.3
+        });
+        for (let i = 0; i < 20; i++) {
+            const radius = i === 0 ? 2.6 : Math.max(0.6, 2.3 - i * 0.08);
+            const seg = new THREE.Mesh(new THREE.SphereGeometry(radius, 12, 10), apophisMat);
+            apophisGroup.add(seg);
+            apophisSegments.push(seg);
+        }
+        skyEventGroup.add(apophisGroup);
+
+        // YERALTI DÜNYASI (DUAT) & ANUBİS'İN TERAZİSİ ALANI (x: 160, z: 160)
+        const underworldGroup = new THREE.Group();
+        underworldGroup.position.set(160, 0, 160);
+        scene.add(underworldGroup);
+
+        const duatFloor = new THREE.Mesh(
+            new THREE.CylinderGeometry(28, 30, 1.5, 24),
+            new THREE.MeshStandardMaterial({ color: 0x181124, roughness: 0.8 })
+        );
+        duatFloor.position.y = -0.75;
+        underworldGroup.add(duatFloor);
+
+        // Anubis (Devasa Çakal Başlı Ölüm Tanrısı)
+        const anubisEntity = createArticulatedEgyptianHuman({
+            role: 'anubis',
+            skinMat: MATS.darkArmorSet,
+            clothMat: MATS.linenCrimson,
+            accentMat: MATS.divineGold
+        });
+        anubisEntity.scale.set(2.8, 2.8, 2.8);
+        anubisEntity.position.set(0, 0, -9);
+        underworldGroup.add(anubisEntity);
+
+        // Anubis'in Altın Terazisi
+        const scaleStand = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.5, 6.5, 10), MATS.divineGold);
+        scaleStand.position.set(4.5, 3.25, -7);
+        underworldGroup.add(scaleStand);
+        const scaleBeam = new THREE.Mesh(new THREE.BoxGeometry(4.2, 0.2, 0.2), MATS.divineGold);
+        scaleBeam.position.set(4.5, 6.2, -7);
+        underworldGroup.add(scaleBeam);
+
+        // Yeraltı Ceza Taşları (Altını olmayanların kıracağı taşlar)
+        const soulStones = [];
+        for (let i = 0; i < 3; i++) {
+            const sRock = new THREE.Mesh(
+                new THREE.DodecahedronGeometry(1.4, 0),
+                new THREE.MeshStandardMaterial({ color: 0x4b1d70, emissive: 0x240938, roughness: 0.5 })
+            );
+            sRock.position.set(-7 + i * 7, 1.1, 4);
+            underworldGroup.add(sRock);
+            soulStones.push(sRock);
+        }
+
+        /********************************************************************
+         * 6. OYUNCU KARAKTERİ, CANLI KÖYLÜLER, VAHŞİ HAYVANLAR & TANRI SET
+         ********************************************************************/
+        const player = createArticulatedEgyptianHuman({
+            role: 'player',
+            skinMat: MATS.skinMortal,
+            clothMat: MATS.linenThief,
+            accentMat: MATS.divineGold
+        });
+        player.position.set(-10, 0, -6);
+        scene.add(player);
+
+        // Köylüler (Nil'de tarım yapan ve Dikilitaş'a taş taşıyan gerçek insan animasyonlu NPC'ler)
+        const villagers = [];
+        const villagerJobs = [
+            { start: new THREE.Vector3(-21, 0, -18), end: new THREE.Vector3(12, 0, -2), label: 'Köylü (Taş Taşıyıcı)' },
+            { start: new THREE.Vector3(-21, 0, 8), end: new THREE.Vector3(12, 0, 2), label: 'Köylü (Papirüs Çiftçisi)' },
+            { start: new THREE.Vector3(18, 0, -24), end: new THREE.Vector3(14, 0, -4), label: 'Köylü (Altın Madencisi)' },
+            { start: new THREE.Vector3(-18, 0, 22), end: new THREE.Vector3(-4, 0, -12), label: 'Köylü (Tapınak Hizmetkârı)' }
+        ];
+
+        villagerJobs.forEach((job, idx) => {
+            const v = createArticulatedEgyptianHuman({
+                role: 'villager',
+                skinMat: MATS.skinVillager,
+                clothMat: MATS.linenWhite,
+                accentMat: MATS.divineGold
+            });
+            v.position.copy(job.start);
+            // Sırtında/omzunda taş bloğu
+            const carriedStone = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.45, 0.55), MATS.stoneHiero);
+            carriedStone.position.set(0, 0.55, 0.35);
+            v.userData.rig.chestGroup.add(carriedStone);
+            v.userData.job = job;
+            v.userData.goingToWork = true;
+            v.userData.carriedStone = carriedStone;
+            v.userData.walkPhase = idx * 1.7;
+            scene.add(v);
+            villagers.push(v);
+        });
+
+        // Vahşi Hayvan Sürüleri
+        const wildBeasts = [];
+        const beastSpawns = [
+            { type: 'crocodile', x: -32, z: -15 },
+            { type: 'crocodile', x: -31, z: 18 },
+            { type: 'scorpion', x: 32, z: 14 },
+            { type: 'scorpion', x: -16, z: 36 },
+            { type: 'hyena', x: 28, z: -22 }
+        ];
+        beastSpawns.forEach(sp => {
+            const b = createWildBeast(sp.type);
+            b.position.set(sp.x, 0, sp.z);
+            b.userData.homePos = new THREE.Vector3(sp.x, 0, sp.z);
+            scene.add(b);
+            wildBeasts.push(b);
+        });
+
+        // ZALİM TANRI SET (2.5x İlahi Boyutlu Boss)
+        const bossSet = createArticulatedEgyptianHuman({
+            role: 'set_boss',
+            skinMat: MATS.skinSet,
+            clothMat: MATS.linenCrimson,
+            accentMat: MATS.divineGold
+        });
+        bossSet.scale.set(2.5, 2.5, 2.5);
+        bossSet.position.set(22, 0, 6);
+        bossSet.userData.hp = 500;
+        bossSet.userData.maxHp = 500;
+        bossSet.userData.attackCooldown = 0;
+        scene.add(bossSet);
+
+        // Yere Dökülen Altın Kan Damlaları (Golden Blood Economy Drops)
+        const goldenBloodDrops = [];
+        function spawnGoldenBloodDrop(pos) {
+            const drop = new THREE.Group();
+            const sphere = new THREE.Mesh(new THREE.SphereGeometry(0.42, 12, 12), MATS.goldenBloodMat);
+            sphere.scale.set(1.2, 0.55, 1.2);
+            drop.add(sphere);
+
+            const ring = new THREE.Mesh(
+                new THREE.RingGeometry(0.5, 0.72, 16),
+                new THREE.MeshBasicMaterial({ color: 0xffea00, side: THREE.DoubleSide })
+            );
+            ring.rotation.x = -Math.PI / 2;
+            ring.position.y = -0.15;
+            drop.add(ring);
+
+            drop.position.set(
+                pos.x + (Math.random() - 0.5) * 4.5,
+                0.35,
+                pos.z + (Math.random() - 0.5) * 4.5
+            );
+            scene.add(drop);
+            goldenBloodDrops.push(drop);
+        }
+
+        // Başlangıçta savaş alanında örnek 2 Altın Kan birikintisi
+        spawnGoldenBloodDrop(new THREE.Vector3(15, 0, 5));
+        spawnGoldenBloodDrop(new THREE.Vector3(19, 0, -3));
+
+        // FİLMDEKİ DEV ZIRHLI ATEŞ KOBRASI (Astarte & Anat'ın Dev Savaş Yılanı)
+        const giantFireCobra = new THREE.Group();
+        giantFireCobra.position.set(-2, 0, -36);
+        giantFireCobra.userData = {
+            hp: 320,
+            maxHp: 320,
+            attackCooldown: 0,
+            breathTimer: 0,
+            homePos: new THREE.Vector3(-2, 0, -36),
+            segments: []
+        };
+        scene.add(giantFireCobra);
+
+        const cobraScaleMat = new THREE.MeshStandardMaterial({
+            color: 0x2b170e,
+            roughness: 0.28,
+            metalness: 0.78,
+            emissive: 0x4a1200,
+            emissiveIntensity: 0.35
+        });
+
+        // Kobra Dikilen Göğüs & Geniş Kobra Kapüşonu (Hood)
+        const cobraHoodGroup = new THREE.Group();
+        cobraHoodGroup.position.set(0, 3.6, 0);
+        giantFireCobra.add(cobraHoodGroup);
+
+        const cobraHood = new THREE.Mesh(
+            new THREE.CylinderGeometry(1.45, 0.7, 3.4, 14),
+            cobraScaleMat
+        );
+        cobraHood.scale.set(1.35, 1, 0.38);
+        cobraHood.castShadow = true;
+        cobraHoodGroup.add(cobraHood);
+
+        // Altın Zırhlı Kobra Göğüs Plakası
+        const cobraArmorPlate = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.95, 0.65, 2.8, 10),
+            MATS.divineGold
+        );
+        cobraArmorPlate.position.set(0, 0, 0.25);
+        cobraArmorPlate.scale.set(1.1, 1, 0.35);
+        cobraHoodGroup.add(cobraArmorPlate);
+
+        // Kobra Baş, Dişler ve Ateş Gözleri
+        const cobraHead = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.75, 1.45), cobraScaleMat);
+        cobraHead.position.set(0, 1.9, 0.45);
+        cobraHoodGroup.add(cobraHead);
+
+        const cobraCrown = new THREE.Mesh(new THREE.ConeGeometry(0.65, 1.1, 6), MATS.divineGold);
+        cobraCrown.position.set(0, 2.55, 0.35);
+        cobraHoodGroup.add(cobraCrown);
+
+        for (let s of [-1, 1]) {
+            const cEye = new THREE.Mesh(
+                new THREE.SphereGeometry(0.16, 8, 8),
+                new THREE.MeshBasicMaterial({ color: 0xff4500 })
+            );
+            cEye.position.set(s * 0.42, 2.05, 1.02);
+            cobraHoodGroup.add(cEye);
+
+            const fang = new THREE.Mesh(new THREE.ConeGeometry(0.08, 0.45, 6), MATS.linenWhite);
+            fang.rotation.x = Math.PI;
+            fang.position.set(s * 0.28, 1.45, 1.05);
+            cobraHoodGroup.add(fang);
+        }
+
+        // Kobra Kıvrılan 12 Boğumlu Kuyruk Gövdesi
+        for (let i = 0; i < 12; i++) {
+            const r = Math.max(0.28, 0.85 - i * 0.048);
+            const seg = new THREE.Mesh(
+                new THREE.SphereGeometry(r, 12, 10),
+                i % 2 === 0 ? cobraScaleMat : MATS.divineGold
+            );
+            seg.position.set(0, Math.max(0.35, 1.8 - i * 0.22), -i * 0.78);
+            seg.castShadow = true;
+            giantFireCobra.add(seg);
+            giantFireCobra.userData.segments.push(seg);
+        }
+
+        // ZAYA & TANRIÇA HATHOR REFAKATÇİ KARAKTERİ (Eklemli İnsan Modeli)
+        const companionZaya = createArticulatedEgyptianHuman({
+            role: 'villager',
+            skinMat: MATS.skinMortal,
+            clothMat: MATS.linenWhite,
+            accentMat: MATS.turquoiseGlow
+        });
+        companionZaya.position.set(-12, 0, -8);
+        companionZaya.visible = false;
+
+        // Hathor'un 42 Yıldızlı Parlayan Halesi
+        const hathorHalo = new THREE.Mesh(
+            new THREE.TorusGeometry(0.45, 0.035, 10, 24),
+            MATS.turquoiseGlow
+        );
+        hathorHalo.rotation.x = Math.PI / 2;
+        hathorHalo.position.y = 0.42;
+        companionZaya.userData.rig.headGroup.add(hathorHalo);
+        scene.add(companionZaya);
+
+        // 3D İLAHİ GÜÇ ŞOK DALGASI & GÜNEŞ SÜTUNU (WebGL VFX)
+        const divineVfxGroup = new THREE.Group();
+        divineVfxGroup.visible = false;
+        scene.add(divineVfxGroup);
+
+        const shockwaveRingMesh = new THREE.Mesh(
+            new THREE.RingGeometry(0.8, 1.45, 32),
+            new THREE.MeshBasicMaterial({ color: 0xffe047, side: THREE.DoubleSide, transparent: true, opacity: 0.9 })
+        );
+        shockwaveRingMesh.rotation.x = -Math.PI / 2;
+        shockwaveRingMesh.position.y = 0.25;
+        divineVfxGroup.add(shockwaveRingMesh);
+
+        const solarPillarMesh = new THREE.Mesh(
+            new THREE.CylinderGeometry(1.2, 1.2, 42, 20, 1, true),
+            new THREE.MeshBasicMaterial({ color: 0x00f0ff, side: THREE.DoubleSide, transparent: true, opacity: 0.45 })
+        );
+        solarPillarMesh.position.y = 21;
+        divineVfxGroup.add(solarPillarMesh);
+
+        /********************************************************************
+         * 7. OYUN MEKANİKLERİ: TANRI DÖNÜŞÜMÜ (2.5x), ZANAAT, ANUBİS & RA
+         ********************************************************************/
+        function selectGodDeity(deity) {
+            gameState.godDeity = deity;
+            ['horus', 'set', 'apis'].forEach(d => {
+                const btn = document.getElementById(`deity-btn-${d}`);
+                if (btn) {
+                    btn.className = d === deity
+                        ? 'p-2 rounded-lg bg-amber-900/70 border-2 border-amber-300 text-center text-xs'
+                        : 'p-2 rounded-lg bg-stone-900/70 border border-amber-700/40 text-center text-xs';
+                }
+            });
+            const icons = { horus: '🦅', set: '🐺', apis: '🐂' };
+            document.getElementById('god-btn-icon').textContent = icons[deity];
+            applyGodArmorVisuals();
+            showToast(`${deity.toUpperCase()} İlahi Zırh Formu seçildi!`);
+            updateHUD();
+        }
+
+        function applyGodArmorVisuals() {
+            const rig = player.userData.rig;
+            if (!rig) return;
+            rig.divineArmorGroup.visible = gameState.isGodMode;
+            rig.wingsGroup.visible = gameState.isGodMode && (gameState.godDeity === 'horus' || gameState.godDeity === 'set');
+
+            if (gameState.godDeity === 'apis') {
+                // Boğa Boynuzları açısı
+                rig.leftHornEar.rotation.z = 0.85;
+                rig.rightHornEar.rotation.z = -0.85;
+            } else {
+                rig.leftHornEar.rotation.z = 0.22;
+                rig.rightHornEar.rotation.z = -0.22;
+            }
+        }
+
+        function toggleGodTransformation() {
+            if (!gameState.isGodMode && gameState.divinity < 25 && gameState.horusEyes < 1) {
+                showToast('Tanrı formuna yükselmek için en az 25 İlahi Güç veya Horus Gözü gerekli!');
+                return;
+            }
+            gameState.isGodMode = !gameState.isGodMode;
+            gameState.scaleTarget = gameState.isGodMode ? 2.5 : 1.0;
+            applyGodArmorVisuals();
+            playSoundEffect('god');
+            spawnBloodBurstParticles(player.position, 18, 0x00f0ff);
+
+            if (gameState.isGodMode) {
+                const msgMap = {
+                    horus: '🦅 HORUS ALTIN ŞAHİN FORMUNA YÜKSELDİN! (2.5x Boyut & Kanatlar)',
+                    set: '🐺 SET ÇAKAL SAVAŞ FORMUNA YÜKSELDİN! (2.5x Boyut)',
+                    apis: '🐂 APİS İLAHİ BOĞA FORMUNA YÜKSELDİN! (2.5x Boyut)'
+                };
+                showToast(msgMap[gameState.godDeity]);
+            } else {
+                showToast('Ölümlü İnsan (Bek) boyutuna geri döndün.');
+            }
+            updateHUD();
+        }
+
+        function answerSphinxRiddle(answer) {
+            if (answer === 'wind') {
+                gameState.sphinxSolved = true;
+                sphinxGateBarrier.visible = false;
+                gameState.divinity = Math.min(100, gameState.divinity + 25);
+                playSoundEffect('god');
+                closeModal('sphinx-modal');
+                showToast('🦁 Sfenks Bilmecesi Çözüldü! Tapınak Kapısı açıldı ve +25 İlahi Güç kazandın!');
+                updateHUD();
+            } else {
+                gameState.hp = Math.max(15, gameState.hp - 20);
+                playSoundEffect('hit');
+                showToast('🌪️ Yanlış Cevap! Sfenks\'in kum fırtınası seni yaraladı (-20 Can). Tekrar dene!');
+                updateHUD();
+            }
+        }
+
+        function toggleScarabMount() {
+            if (gameState.inUnderworld) {
+                showToast('Yeraltı dünyasında Khepri bineği çağrılamaz!');
+                return;
+            }
+            gameState.isMountedScarab = !gameState.isMountedScarab;
+            const btn = document.getElementById('btn-mount-scarab');
+            if (gameState.isMountedScarab) {
+                playSoundEffect('gold');
+                if (btn) btn.textContent = '🪲 Binekten İn';
+                showToast('🪲 Altın Khepri (Scarab) Bineğine bindin! Çöl hızın %65 arttı!');
+            } else {
+                if (btn) btn.textContent = '🪲 Khepri Bineği';
+                scarabMount.position.set(player.position.x - 2.2, 0, player.position.z);
+                showToast('Khepri bineğinden indin.');
+            }
+        }
+
+        function tradeWithVillagers(action) {
+            if (action === 'sell_wheat') {
+                if (gameState.wheat < 6) {
+                    showToast('Satmak için en az 6 Buğday/Papirüs gerekli!');
+                    return;
+                }
+                gameState.wheat -= 6;
+                gameState.gold += 25;
+                playSoundEffect('gold');
+                showToast('🌾 Köylü tüccara 6 Buğday sattın! (+25 Altın)');
+            } else if (action === 'buy_stone') {
+                if (gameState.gold < 20) {
+                    showToast('5 Taş almak için 20 Altın gerekli!');
+                    return;
+                }
+                gameState.gold -= 20;
+                gameState.stone += 5;
+                playSoundEffect('gold');
+                showToast('🪨 Taş ustalarından +5 Blok Taş satın alındı!');
+            } else if (action === 'boost_workers') {
+                if (gameState.gold < 30) {
+                    showToast('İşçi kervanını finanse etmek için 30 Altın gerekli!');
+                    return;
+                }
+                gameState.gold -= 30;
+                gameState.workerSpeedBoost = 2.2;
+                playSoundEffect('god');
+                showToast('🐪 Köylü İşçi Kervanı hızlandırıldı! Dikilitaş inşası otomatik ilerliyor.');
+                closeModal('market-modal');
+            }
+            updateHUD();
+        }
+
+        function setDivineTaxPolicy(rate) {
+            if (!gameState.isGodMode && !gameState.setEyeStolen) {
+                showToast('Vergi oranını değiştirmek için önce 2.5x Tanrı Formuna geçmeli veya Gözü çalmalısın!');
+                return;
+            }
+            gameState.setTaxRate = rate;
+            gameState.setEyeStolen = (rate === 0);
+            if (rate === 0) {
+                gameState.divinity = Math.min(100, gameState.divinity + 20);
+                showToast('👑 %0 Adil Horus Yönetimi ilan edildi! Köylüler sana dua ediyor (+20 İlahi Güç).');
+            } else if (rate <= 0.25) {
+                showToast('⚖️ %20 Dengeli Vergi yürürlüğe girdi.');
+            } else {
+                showToast('🔥 %50 Tiranlık Vergisi konuldu! Altın gelirin arttı ama halk huzursuz!');
+            }
+            closeModal('market-modal');
+            updateHUD();
+        }
+
+        function upgradeSkill(skillType) {
+            if (skillType === 'thief') {
+                if (gameState.gold < 25 || gameState.goldenBlood < 1) {
+                    showToast('Geliştirme için 25 Altın ve 1 Altın Kan gerekli!');
+                    return;
+                }
+                gameState.gold -= 25;
+                gameState.goldenBlood -= 1;
+                gameState.thiefSkillLevel++;
+                gameState.weaponDamage += 20;
+                playSoundEffect('magic');
+                showToast(`🗡️ Hırsız Ustalığı Seviye ${gameState.thiefSkillLevel} oldu! Hasar: ${gameState.weaponDamage}`);
+            } else if (skillType === 'divine_nova') {
+                if (gameState.goldenBlood < 2) {
+                    showToast('İlahi Güneş Patlaması için 2 Altın Kan gerekli!');
+                    return;
+                }
+                gameState.goldenBlood -= 2;
+                gameState.divineNovaUnlocked = true;
+                gameState.weaponDamage += 30;
+                playSoundEffect('magic');
+                showToast('☀️ İlahi Güneş Patlaması güçlendirildi! (✨) tuşu artık devasa hasar veriyor!');
+            }
+            updateHUD();
+        }
+
+        function summonCompanion(who) {
+            if (gameState.companionActive) {
+                showToast('💖 Zaya zaten yanında! Seni iyileştirmeye devam ediyor.');
+                closeModal('thoth-modal');
+                return;
+            }
+            if (gameState.gold < 30 || gameState.goldenBlood < 1) {
+                showToast('Zaya\'yı Hathor\'un Bileziği ile kurtarmak için 30 Altın ve 1 Altın Kan gerekli!');
+                return;
+            }
+            gameState.gold -= 30;
+            gameState.goldenBlood -= 1;
+            gameState.companionActive = true;
+            companionZaya.visible = true;
+            companionZaya.position.set(player.position.x - 1.8, 0, player.position.z - 1.5);
+            playSoundEffect('magic');
+            spawnBloodBurstParticles(companionZaya.position, 20, 0x00f0ff);
+            const btn = document.getElementById('btn-summon-zaya');
+            if (btn) btn.textContent = 'AKTİF ✓';
+            closeModal('thoth-modal');
+            showToast('💖 Zaya, Hathor\'un 42 Yıldızlı Bileziği ile kurtarıldı! Artık seninle yürüyor ve Can yeniliyor.');
+            updateHUD();
+        }
+
+        function craftItem(itemType) {
+            if (itemType === 'khopesh') {
+                if (gameState.goldenBlood < 2 || gameState.gold < 20) {
+                    showToast('Yetersiz malzeme! 2 Altın Kan ve 20 Altın gerekli.');
+                    return;
+                }
+                gameState.goldenBlood -= 2;
+                gameState.gold -= 20;
+                gameState.weaponTier = 2;
+                gameState.weaponDamage = 55;
+                player.userData.rig.bladeBase.material = MATS.goldenBloodMat;
+                showToast('🗡️ Altın Kanlı Khopesh Kılıcı dövüldü! Hasar: 55');
+                closeModal('craft-modal');
+            } else if (itemType === 'spear') {
+                if (gameState.goldenBlood < 4 || gameState.horusEyes < 1) {
+                    showToast('Yetersiz malzeme! 4 Altın Kan ve 1 Horus Gözü gerekli.');
+                    return;
+                }
+                gameState.goldenBlood -= 4;
+                gameState.weaponTier = 3;
+                gameState.weaponDamage = 110;
+                player.userData.rig.bladeBase.scale.set(1.2, 1.2, 2.2);
+                player.userData.rig.bladeBase.material = MATS.turquoiseGlow;
+                showToast('🔱 Efsanevi Ra Mızrağı üretildi! Hasar: 110');
+                closeModal('craft-modal');
+            }
+            updateHUD();
+        }
+
+        function donateToRa() {
+            if (gameState.wheat < 5 || gameState.gold < 15) {
+                showToast('Dua adağı için 5 Buğday ve 15 Altın gerekli!');
+                return;
+            }
+            gameState.wheat -= 5;
+            gameState.gold -= 15;
+            gameState.raPower = Math.min(100, gameState.raPower + 35);
+            gameState.divinity = Math.min(100, gameState.divinity + 30);
+            if (gameState.isNightEvent && gameState.raPower >= 95) {
+                endApophisNightEvent(true);
+            } else {
+                showToast('☀️ Ra\'nın Güneş Gemisine enerji gönderildi! (+30 İlahi Güç)');
+            }
+            updateHUD();
+        }
+
+        // ANUBİS VE AHİRET VERGİSİ (ÖLÜM MEKANİĞİ)
+        function triggerPlayerDeath() {
+            gameState.inUnderworld = true;
+            gameState.underworldStonesLeft = 3;
+            soulStones.forEach(s => { s.visible = true; });
+            player.position.set(160, 0, 165);
+            document.getElementById('zone-indicator').textContent = 'Duat (Yeraltı)';
+            document.getElementById('anubis-gold-count').textContent = gameState.gold;
+            document.getElementById('underworld-stone-status').textContent =
+                `Veya Yeraltı Dünyası'nda 3 Ruh Taşı kırarak cezanı doldur! (Kalan: 3)`;
+            openModal('anubis-modal');
+        }
+
+        function payAnubisTax() {
+            if (gameState.gold < 40) {
+                showToast('Yeterli Altının yok! Yeraltı Dünyası\'nda 3 Ruh Taşı kırmalısın.');
+                return;
+            }
+            gameState.gold -= 40;
+            resurrectFromUnderworld('⚖️ Anubis Ahiret Vergisini kabul etti! Eşyalarınla dirildin.');
+        }
+
+        function closeAnubisModalToMine() {
+            closeModal('anubis-modal');
+            showToast('⛏️ Anubis\'in önündeki 3 Mor Ruh Taşını kırarak dünyaya dön!');
+        }
+
+        function resurrectFromUnderworld(msg) {
+            gameState.inUnderworld = false;
+            gameState.hp = gameState.maxHp;
+            closeModal('anubis-modal');
+            player.position.set(-8, 0, -6);
+            document.getElementById('zone-indicator').textContent = 'Nil Vadisi';
+            showToast(msg);
+            updateHUD();
+        }
+
+        // RA VS APOPHIS SUNUCU ÇAPINDA GECE ETKİNLİĞİ
+        function toggleNightApophisEvent() {
+            gameState.isNightEvent = !gameState.isNightEvent;
+            const skyLabel = document.getElementById('sky-state-label');
+            const timerText = document.getElementById('apophis-timer-text');
+
+            if (gameState.isNightEvent) {
+                apophisGroup.visible = true;
+                gameState.raPower = 48;
+                scene.background.setHex(0x090414);
+                scene.fog.color.setHex(0x090414);
+                sunLight.intensity = 0.35;
+                sunLight.color.setHex(0x9b5de5);
+                skyLabel.innerHTML = '🐍 KAOS YILANI APOPHIS GÜNEŞE SALDIRIYOR!';
+                timerText.textContent = 'Ra Sunağına Bağış Yap veya İlahi Güç Kullan!';
+                showToast('🌑 GECE ÇÖKTÜ! Apophis Ra\'nın Güneş Gemisine saldırıyor!');
+            } else {
+                endApophisNightEvent(true);
+            }
+            updateHUD();
+        }
+
+        function endApophisNightEvent(victory) {
+            gameState.isNightEvent = false;
+            apophisGroup.visible = false;
+            const skyLabel = document.getElementById('sky-state-label');
+            const timerText = document.getElementById('apophis-timer-text');
+
+            if (victory) {
+                gameState.darkAgePenalty = false;
+                gameState.raPower = 100;
+                scene.background.setHex(0xdca968);
+                scene.fog.color.setHex(0xdca968);
+                sunLight.intensity = 1.45;
+                sunLight.color.setHex(0xffe6a3);
+                skyLabel.innerHTML = '☀️ RA\'NIN GÜNEŞ GEMİSİ ZAFER KAZANDI';
+                timerText.textContent = 'Üretim %100 Normal';
+                showToast('☀️ Ra\'nın Mızrağı Apophis\'i püskürttü! Mısır\'a şafak doğdu!');
+            } else {
+                gameState.darkAgePenalty = true;
+                scene.background.setHex(0x1a0808);
+                scene.fog.color.setHex(0x1a0808);
+                skyLabel.innerHTML = '🌑 KARANLIK ÇAĞ (ÜRETİM -%50)';
+                timerText.textContent = 'Güneş Tutuldu!';
+                showToast('🌑 Apophis güneşi yuttu! Karanlık Çağ başladı, üretim %50 düştü!');
+            }
+            updateHUD();
+        }
+
+        function teleportPlayer(target) {
+            if (gameState.inUnderworld) {
+                showToast('Önce Anubis\'in Yeraltı Dünyası\'ndan çıkmalısın!');
+                return;
+            }
+            if (target === 'nile') {
+                player.position.set(-18, 0, -6);
+                document.getElementById('zone-indicator').textContent = 'Nil Vadisi';
+                showToast('🌴 Nil Nehri kıyısına ve tarım alanlarına geçildi.');
+            } else if (target === 'obelisk') {
+                player.position.set(12, 0, 6);
+                document.getElementById('zone-indicator').textContent = 'Dikilitaş & Set';
+                showToast('🏛️ Tanrı Set\'in Dikilitaş inşaat alanına geldin.');
+            } else if (target === 'temple') {
+                player.position.set(0, 0, 32);
+                document.getElementById('zone-indicator').textContent = 'Tuzaklı Tapınak';
+                showToast('👁️ Set\'in Tuzaklı Tapınağı! Sallanan bıçaklardan takla atarak geç ve Gözü çal!');
+            } else if (target === 'cobra') {
+                player.position.set(-2, 0, -27);
+                document.getElementById('zone-indicator').textContent = 'Kobra Çölü';
+                showToast('🐍 Astarte\'nin Dev Zırhlı Ateş Kobrası! Saldırarak Altın Kan ve Hazine kazan!');
+            }
+        }
+
+        /********************************************************************
+         * 8. BİRİNCİL AKSİYON: HASAT, MADEN, İNŞAAT, SOYGUN VE TANRI SAVAŞI
+         ********************************************************************/
+        function performPrimaryAction() {
+            if (gameState.attackAnimTimer > 0) return;
+            gameState.attackAnimTimer = 0.42;
+            gameState.comboStage = (gameState.comboStage || 0) + 1;
+            playSoundEffect('slash');
+
+            const pPos = player.position;
+            const prodMultiplier = gameState.darkAgePenalty ? 0.5 : 1.0;
+            const taxKeep = gameState.setEyeStolen ? 1.0 : (1.0 - gameState.setTaxRate);
+
+            // 0. Sfenks Muhafızı Bilmecesi Etkileşimi
+            if (!gameState.sphinxSolved && pPos.distanceTo(sphinxGuardian.position) < 6.8) {
+                openModal('sphinx-modal');
+                return;
+            }
+
+            // 1. Yeraltı Dünyası'ndaysa Ruh Taşı Kırma
+            if (gameState.inUnderworld) {
+                for (let rock of soulStones) {
+                    if (rock.visible && pPos.distanceTo(worldGroup.localToWorld(rock.position.clone()).add(underworldGroup.position)) < 4.5) {
+                        rock.visible = false;
+                        gameState.underworldStonesLeft--;
+                        if (gameState.underworldStonesLeft <= 0) {
+                            resurrectFromUnderworld('⚖️ Cezanı doldurdun! Anubis seni yaşayanlar dünyasına geri gönderdi.');
+                        } else {
+                            showToast(`⛏️ Ruh Taşı kırıldı! Kalan: ${gameState.underworldStonesLeft}`);
+                        }
+                        return;
+                    }
+                }
+                // Mesafe kontrolünü doğrudan underworldGroup'a göre yapalım
+                for (let rock of soulStones) {
+                    const worldRockPos = rock.position.clone().add(underworldGroup.position);
+                    if (rock.visible && pPos.distanceTo(worldRockPos) < 4.8) {
+                        rock.visible = false;
+                        gameState.underworldStonesLeft--;
+                        if (gameState.underworldStonesLeft <= 0) {
+                            resurrectFromUnderworld('⚖️ Cezanı doldurdun! Anubis seni yaşayanlar dünyasına geri gönderdi.');
+                        } else {
+                            showToast(`⛏️ Ruh Taşı kırıldı! Kalan: ${gameState.underworldStonesLeft}`);
+                        }
+                        return;
+                    }
+                }
+                showToast('Mor Ruh Taşlarına yaklaşarak vur!');
+                return;
+            }
+
+            // 2. Tuzaklı Tapınakta Horus'un Gözünü Çalma (Anti-Tiranlık Soygunu)
+            const eyeWorldPos = eyeOfHorusMesh.position.clone().add(templeGroup.position);
+            if (!gameState.setEyeStolen && pPos.distanceTo(eyeWorldPos) < 4.5) {
+                gameState.setEyeStolen = true;
+                gameState.horusEyes = 2;
+                gameState.divinity = 100;
+                eyeOfHorusMesh.visible = false;
+                // Güç kaynağı çalınan Tanrı Set ölümlü boyutuna (1.1x) düşer!
+                bossSet.scale.set(1.15, 1.15, 1.15);
+                bossSet.userData.hp = Math.min(bossSet.userData.hp, 160);
+                showToast('👁️ HORUS\'UN GÖZÜ ÇALINDI! Set ölümlü boyutuna düştü ve %45 Zulüm Vergisi kalktı!');
+                updateHUD();
+                return;
+            }
+
+            // 3. Tanrı Set ile Savaş ve Altın Kan Dökülmesi
+            const attackRange = gameState.isGodMode ? 7.5 : 4.6;
+            if (pPos.distanceTo(bossSet.position) < attackRange && bossSet.userData.hp > 0) {
+                const dmg = Math.round(gameState.weaponDamage * (gameState.isGodMode ? 2.2 : 1.0));
+                bossSet.userData.hp = Math.max(0, bossSet.userData.hp - dmg);
+                playSoundEffect('hit');
+                spawnFloatingText(bossSet.position, `-${dmg} 🩸`, '#ffdf00');
+                spawnBloodBurstParticles(bossSet.position, 16, 0xffcc00);
+
+                // Tanrı yaralandığında yere Altın Kan dökülür!
+                spawnGoldenBloodDrop(bossSet.position);
+                if (gameState.weaponTier >= 2) spawnGoldenBloodDrop(bossSet.position);
+
+                if (bossSet.userData.hp <= 0) {
+                    gameState.divinity = 100;
+                    gameState.gold += 100;
+                    showToast('👑 ZALİM TANRI SET MAĞLUP EDİLDİ! Yere bolca Altın Kan döküldü!');
+                    setTimeout(() => {
+                        bossSet.userData.hp = bossSet.userData.maxHp;
+                    }, 10000);
+                } else {
+                    showToast(`⚔️ Set'e ${dmg} hasar verdin! Yere Altın Kan (🩸) döküldü!`);
+                }
+                updateHUD();
+                return;
+            }
+
+            // 3.5. Dev Zırhlı Ateş Kobrası (Astarte'nin Yılanı) Savaşı
+            if (pPos.distanceTo(giantFireCobra.position) < attackRange + 1.5 && giantFireCobra.userData.hp > 0) {
+                const dmg = Math.round(gameState.weaponDamage * (gameState.isGodMode ? 2.2 : 1.0));
+                giantFireCobra.userData.hp = Math.max(0, giantFireCobra.userData.hp - dmg);
+                playSoundEffect('hit');
+                spawnFloatingText(giantFireCobra.position, `-${dmg} 🔥`, '#ff7b00');
+                spawnBloodBurstParticles(giantFireCobra.position, 14, 0xff5500);
+
+                if (giantFireCobra.userData.hp <= 0) {
+                    gameState.gold += 80;
+                    gameState.divinity = 100;
+                    gameState.cobraDefeatedCount++;
+                    spawnGoldenBloodDrop(giantFireCobra.position);
+                    spawnGoldenBloodDrop(giantFireCobra.position);
+                    spawnGoldenBloodDrop(giantFireCobra.position);
+                    showToast('🐍 DEV ATEŞ KOBRASI AVLANDI! +80 Altın ve yere 3 damla Altın Kan döküldü!');
+                    setTimeout(() => {
+                        giantFireCobra.userData.hp = giantFireCobra.userData.maxHp;
+                    }, 9000);
+                } else {
+                    showToast(`🐍 Dev Ateş Kobrasına ${dmg} hasar verdin! (Kalan Can: ${giantFireCobra.userData.hp})`);
+                }
+                updateHUD();
+                return;
+            }
+
+            // 4. Vahşi Hayvan Avı (Timsah, Dev Akrep, Sırtlan)
+            for (let beast of wildBeasts) {
+                if (pPos.distanceTo(beast.position) < attackRange) {
+                    beast.userData.hp -= gameState.weaponDamage;
+                    playSoundEffect('hit');
+                    spawnFloatingText(beast.position, `-${gameState.weaponDamage}`, '#ff5555');
+                    if (beast.userData.hp <= 0) {
+                        const goldEarned = Math.max(4, Math.round(18 * prodMultiplier * taxKeep));
+                        gameState.gold += goldEarned;
+                        gameState.divinity = Math.min(100, gameState.divinity + 12);
+                        spawnFloatingText(beast.position, `+${goldEarned} 🪙`, '#fde047');
+                        showToast(`🏹 ${beast.userData.label} avlandı! +${goldEarned} Altın (Vergi sonrası)`);
+                        beast.userData.hp = beast.userData.maxHp;
+                        beast.position.x += (Math.random() - 0.5) * 10;
+                    } else {
+                        showToast(`⚔️ ${beast.userData.label} yaralandı! (${beast.userData.hp} Can)`);
+                    }
+                    updateHUD();
+                    return;
+                }
+            }
+
+            // 5. Dikilitaş (Obelisk) İnşaatına Taş/Odun Teslim Etme
+            if (pPos.distanceTo(obeliskGroup.position) < 6.5) {
+                if (gameState.stone >= 2) {
+                    gameState.stone -= 2;
+                    gameState.obeliskProgress = Math.min(100, gameState.obeliskProgress + 8);
+                    gameState.divinity = Math.min(100, gameState.divinity + 15);
+                    gameState.gold += 15;
+                    obeliskShaft.scale.y = 0.5 + (gameState.obeliskProgress / 100) * 0.7;
+                    showToast('🏛️ Dikilitaş inşaatına taş eklendi! (+15 Altın, +15 İlahi Güç)');
+                    updateHUD();
+                    return;
+                } else {
+                    showToast('Dikilitaş inşası için en az 2 Taş/Odun gerekli! Kayalardan kazabilirsin.');
+                    return;
+                }
+            }
+
+            // 6. Tarım (Buğday/Papirüs) ve Maden (Altın/Taş) Hasadı
+            for (let node of resourceNodes) {
+                if (pPos.distanceTo(node.position) < 4.5) {
+                    if (node.userData.nodeType === 'wheat') {
+                        const amt = Math.max(1, Math.round(4 * prodMultiplier * taxKeep));
+                        gameState.wheat += amt;
+                        showToast(`🌾 Nil kıyısından +${amt} Buğday/Papirüs hasat edildi!`);
+                    } else {
+                        const stoneAmt = Math.max(1, Math.round(3 * prodMultiplier));
+                        const goldAmt = Math.max(2, Math.round(12 * prodMultiplier * taxKeep));
+                        gameState.stone += stoneAmt;
+                        gameState.gold += goldAmt;
+                        showToast(`⛏️ Madenden +${stoneAmt} Taş ve +${goldAmt} Altın/Bakır çıkarıldı!`);
+                    }
+                    updateHUD();
+                    return;
+                }
+            }
+
+            // 7. Ra Güneş Sunağına Hızlı Dua
+            if (pPos.distanceTo(solarAltar.position) < 5.0) {
+                donateToRa();
+                return;
+            }
+        }
+
+        // Özel İlahi Yetenek (Şahin Fırtınası / Güneş Patlaması)
+        function performSpecialDivineSkill() {
+            if (gameState.specialAnimTimer > 0) return;
+            gameState.specialAnimTimer = 0.75;
+            playSoundEffect('magic');
+
+            // 3D İlahi Güneş Sütunu ve Şok Dalgası Görsel Efektini Başlat
+            divineVfxGroup.position.copy(player.position);
+            divineVfxGroup.visible = true;
+            shockwaveRingMesh.scale.setScalar(1);
+            spawnBloodBurstParticles(player.position, 22, 0x00f0ff);
+
+            if (gameState.isNightEvent) {
+                gameState.raPower = Math.min(100, gameState.raPower + 35);
+                if (gameState.raPower >= 95) {
+                    endApophisNightEvent(true);
+                } else {
+                    showToast('✨ Gökyüzündeki Ra\'nın Gemisine İlahi Işın gönderdin! (+35 Güç)');
+                }
+                updateHUD();
+                return;
+            }
+
+            let hitAnything = false;
+            if (player.position.distanceTo(bossSet.position) < 13) {
+                bossSet.userData.hp = Math.max(0, bossSet.userData.hp - 95);
+                spawnFloatingText(bossSet.position, `-95 ✨`, '#00f0ff');
+                spawnGoldenBloodDrop(bossSet.position);
+                spawnGoldenBloodDrop(bossSet.position);
+                showToast('✨ İLAHİ GÜNEŞ PATLAMASI! Set sarsıldı ve yere 2 damla Altın Kan döküldü!');
+                hitAnything = true;
+            }
+            if (player.position.distanceTo(giantFireCobra.position) < 13) {
+                giantFireCobra.userData.hp = Math.max(0, giantFireCobra.userData.hp - 110);
+                spawnFloatingText(giantFireCobra.position, `-110 ✨`, '#00f0ff');
+                spawnGoldenBloodDrop(giantFireCobra.position);
+                showToast('✨ İLAHİ FIRTINA! Dev Ateş Kobrası ağır hasar aldı!');
+                hitAnything = true;
+            }
+            if (!hitAnything) {
+                gameState.divinity = Math.min(100, gameState.divinity + 25);
+                gameState.hp = Math.min(gameState.maxHp, gameState.hp + 20);
+                showToast('✨ İlahi Güneş Kutsaması! (+25 İlahi Güç, +20 Can)');
+            }
+            updateHUD();
+        }
+
+        /********************************************************************
+         * 9. MOBİL DOKUNMATİK ANALOG, 360° KAMERA SÜRÜKLEME VE KLAVYE
+         ********************************************************************/
+        const joystickZone = document.getElementById('joystick-zone');
+        const joystickKnob = document.getElementById('joystick-knob');
+        let joystickTouchId = null;
+        let cameraTouchId = null;
+        let lastCamX = 0;
+        let lastCamY = 0;
+
+        function handleJoystickMove(clientX, clientY) {
+            const rect = joystickZone.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+            const maxRadius = rect.width * 0.38;
+
+            let dx = clientX - centerX;
+            let dy = clientY - centerY;
+            const dist = Math.hypot(dx, dy);
+            if (dist > maxRadius) {
+                dx = (dx / dist) * maxRadius;
+                dy = (dy / dist) * maxRadius;
+            }
+            joystickKnob.style.transform = `translate(${dx}px, ${dy}px)`;
+            gameState.moveX = dx / maxRadius;
+            gameState.moveZ = dy / maxRadius;
+        }
+
+        function resetJoystick() {
+            joystickTouchId = null;
+            joystickKnob.style.transform = `translate(0px, 0px)`;
+            gameState.moveX = 0;
+            gameState.moveZ = 0;
+        }
+
+        joystickZone.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            const touch = e.changedTouches[0];
+            joystickTouchId = touch.identifier;
+            handleJoystickMove(touch.clientX, touch.clientY);
+        }, { passive: false });
+
+        joystickZone.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            for (let t of e.changedTouches) {
+                if (t.identifier === joystickTouchId) {
+                    handleJoystickMove(t.clientX, t.clientY);
+                }
+            }
+        }, { passive: false });
+
+        joystickZone.addEventListener('touchend', (e) => {
+            for (let t of e.changedTouches) {
+                if (t.identifier === joystickTouchId) resetJoystick();
+            }
+        });
+
+        // Kamera Döndürme (Canvas üzerinde dokunmatik & fare sürükleme)
+        canvas.addEventListener('touchstart', (e) => {
+            const touch = e.changedTouches[0];
+            cameraTouchId = touch.identifier;
+            lastCamX = touch.clientX;
+            lastCamY = touch.clientY;
+        }, { passive: true });
+
+        canvas.addEventListener('touchmove', (e) => {
+            for (let t of e.changedTouches) {
+                if (t.identifier === cameraTouchId) {
+                    const dx = t.clientX - lastCamX;
+                    const dy = t.clientY - lastCamY;
+                    lastCamX = t.clientX;
+                    lastCamY = t.clientY;
+                    gameState.cameraYaw -= dx * 0.007;
+                    gameState.cameraPitch = Math.max(0.15, Math.min(1.15, gameState.cameraPitch + dy * 0.005));
+                }
+            }
+        }, { passive: true });
+
+        let isMouseDragging = false;
+        canvas.addEventListener('mousedown', (e) => {
+            isMouseDragging = true;
+            lastCamX = e.clientX;
+            lastCamY = e.clientY;
+        });
+        window.addEventListener('mousemove', (e) => {
+            if (!isMouseDragging) return;
+            const dx = e.clientX - lastCamX;
+            const dy = e.clientY - lastCamY;
+            lastCamX = e.clientX;
+            lastCamY = e.clientY;
+            gameState.cameraYaw -= dx * 0.006;
+            gameState.cameraPitch = Math.max(0.15, Math.min(1.15, gameState.cameraPitch + dy * 0.005));
+        });
+        window.addEventListener('mouseup', () => { isMouseDragging = false; });
+
+        // Klavye Desteği (WASD + Space)
+        const keys = {};
+        window.addEventListener('keydown', (e) => {
+            keys[e.code] = true;
+            if (e.code === 'Space') performPrimaryAction();
+            if (e.code === 'ShiftLeft') gameState.dodgeTimer = 0.48;
+            if (e.code === 'KeyG') toggleGodTransformation();
+        });
+        window.addEventListener('keyup', (e) => { keys[e.code] = false; });
+
+        // Sağ Aksiyon Butonları Dinleyicileri
+        document.getElementById('btn-attack').addEventListener('click', performPrimaryAction);
+        document.getElementById('btn-dodge').addEventListener('click', () => {
+            if (gameState.dodgeTimer <= 0) {
+                gameState.dodgeTimer = 0.48;
+                showToast('💨 Hırsız Taklası! Tuzaklardan sıyrıldın.');
+            }
+        });
+        document.getElementById('btn-god-form').addEventListener('click', toggleGodTransformation);
+        document.getElementById('btn-special').addEventListener('click', performSpecialDivineSkill);
+        document.getElementById('btn-trigger-night').addEventListener('click', toggleNightApophisEvent);
+
+        /********************************************************************
+         * 10. ANA OYUN DÖNGÜSÜ (GAME LOOP): FİZİK, TUZAKLAR, AI VE ANİMASYON
+         ********************************************************************/
+        const clock = new THREE.Clock();
+
+        function updateGame(dt, elapsed) {
+            // Klavye girdilerini birleştir
+            let inputX = gameState.moveX;
+            let inputZ = gameState.moveZ;
+            if (keys['KeyW'] || keys['ArrowUp']) inputZ = -1;
+            if (keys['KeyS'] || keys['ArrowDown']) inputZ = 1;
+            if (keys['KeyA'] || keys['ArrowLeft']) inputX = -1;
+            if (keys['KeyD'] || keys['ArrowRight']) inputX = 1;
+
+            // Zamanlayıcılar
+            if (gameState.attackAnimTimer > 0) gameState.attackAnimTimer = Math.max(0, gameState.attackAnimTimer - dt);
+            if (gameState.dodgeTimer > 0) gameState.dodgeTimer = Math.max(0, gameState.dodgeTimer - dt);
+            if (gameState.specialAnimTimer > 0) {
+                gameState.specialAnimTimer = Math.max(0, gameState.specialAnimTimer - dt);
+                const progress = 1 - (gameState.specialAnimTimer / 0.75);
+                shockwaveRingMesh.scale.setScalar(1 + progress * 11);
+                shockwaveRingMesh.material.opacity = Math.max(0, 1 - progress);
+                solarPillarMesh.rotation.y += dt * 6;
+                if (gameState.specialAnimTimer <= 0) divineVfxGroup.visible = false;
+            }
+
+            // Canlı FPS ve GPU Draw-Call Performans Rozeti Güncellemesi
+            const perfBadge = document.getElementById('fps-perf-badge');
+            if (perfBadge && Math.floor(elapsed * 2) !== Math.floor((elapsed - dt) * 2)) {
+                const fps = Math.min(60, Math.round(1 / Math.max(0.016, dt)));
+                const drawCalls = renderer.info.render.calls;
+                perfBadge.textContent = `${fps} FPS | DrawCall: ${drawCalls}`;
+            }
+
+            // 1. Oyuncu Boyut Geçişi (1.0x Ölümlü <-> 2.5x Tanrı)
+            gameState.scaleCurrent += (gameState.scaleTarget - gameState.scaleCurrent) * Math.min(1, dt * 6);
+            player.scale.setScalar(gameState.scaleCurrent);
+
+            // 2. Oyuncu Hareketi ve Kamera Yönüne Göre Yürüme
+            const moveMag = Math.min(1, Math.hypot(inputX, inputZ));
+            const mountMult = gameState.isMountedScarab ? 1.65 : 1.0;
+            const baseSpeed = (gameState.isGodMode ? 11.5 : 7.2) * mountMult;
+            const dodgeBoost = gameState.dodgeTimer > 0 ? 1.75 : 1.0;
+            const currentSpeed = moveMag * baseSpeed * dodgeBoost;
+
+            if (moveMag > 0.08) {
+                const moveAngle = Math.atan2(inputX, inputZ) + gameState.cameraYaw;
+                player.rotation.y = moveAngle;
+                const nextX = player.position.x + Math.sin(moveAngle) * currentSpeed * dt;
+                const nextZ = player.position.z + Math.cos(moveAngle) * currentSpeed * dt;
+
+                // Sfenks bilmecesi çözülmeden tapınak koridoruna (Z > 33.5) geçişi engelle
+                if (!gameState.sphinxSolved && nextZ > 33.2 && Math.abs(nextX) < 6.5) {
+                    openModal('sphinx-modal');
+                } else {
+                    player.position.x = nextX;
+                    player.position.z = nextZ;
+                }
+            }
+
+            // Khepri (Scarab) Bineği Pozisyon ve Bacak Animasyonu
+            if (gameState.isMountedScarab) {
+                scarabMount.position.set(player.position.x, 0, player.position.z);
+                scarabMount.rotation.y = player.rotation.y;
+                player.position.y = 0.58;
+                scarabLegs.forEach(legObj => {
+                    legObj.mesh.rotation.y = Math.sin(elapsed * 15 + legObj.index * 1.4) * 0.38 * moveMag * legObj.side;
+                });
+            } else if (gameState.isGodMode && gameState.godDeity === 'horus') {
+                player.position.y = 0.65 + Math.sin(elapsed * 3.5) * 0.25;
+            } else {
+                player.position.y = 0;
+            }
+
+            // 3D Partikül Fizik Güncellemesi
+            for (let i = activeParticles.length - 1; i >= 0; i--) {
+                const pt = activeParticles[i];
+                pt.life -= dt;
+                if (pt.life <= 0) {
+                    scene.remove(pt.mesh);
+                    activeParticles.splice(i, 1);
+                } else {
+                    pt.vel.y -= 14 * dt;
+                    pt.mesh.position.addScaledVector(pt.vel, dt);
+                    pt.mesh.scale.setScalar(Math.max(0.1, pt.life));
+                }
+            }
+
+            // Oyuncu İskelet Animasyonu
+            animateHumanoidRig(player, dt, elapsed, {
+                speed: currentSpeed,
+                attackTimer: gameState.attackAnimTimer,
+                comboStage: gameState.comboStage,
+                dodgeTimer: gameState.dodgeTimer,
+                isCarrying: false,
+                isGod: gameState.isGodMode,
+                isMounted: gameState.isMountedScarab
+            });
+
+            // 3. Yerdeki Altın Kan Damlalarını Toplama (Golden Blood Economy)
+            for (let i = goldenBloodDrops.length - 1; i >= 0; i--) {
+                const drop = goldenBloodDrops[i];
+                drop.rotation.y += dt * 2.5;
+                if (player.position.distanceTo(drop.position) < 2.6 * gameState.scaleCurrent) {
+                    scene.remove(drop);
+                    goldenBloodDrops.splice(i, 1);
+                    gameState.goldenBlood++;
+                    gameState.divinity = Math.min(100, gameState.divinity + 10);
+                    showToast('🩸 Yerdeki Altın Kan toplandı! Ptah Ocağında Efsanevi Silah üretebilirsin.');
+                    updateHUD();
+                }
+            }
+
+            // 4. Köylü NPC'lerin Canlı Çalışma Döngüsü
+            villagers.forEach(v => {
+                const target = v.userData.goingToWork ? v.userData.job.end : v.userData.job.start;
+                const dir = target.clone().sub(v.position);
+                const dist = dir.length();
+                const vSpeed = 3.2 * gameState.workerSpeedBoost;
+                if (dist < 1.2) {
+                    v.userData.goingToWork = !v.userData.goingToWork;
+                    v.userData.carriedStone.visible = v.userData.goingToWork;
+                    if (!v.userData.goingToWork && gameState.obeliskProgress < 100) {
+                        gameState.obeliskProgress = Math.min(100, gameState.obeliskProgress + 1);
+                        obeliskShaft.scale.y = 0.5 + (gameState.obeliskProgress / 100) * 0.7;
+                        updateHUD();
+                    }
+                } else {
+                    dir.normalize();
+                    v.position.addScaledVector(dir, vSpeed * dt);
+                    v.rotation.y = Math.atan2(dir.x, dir.z);
+                }
+                animateHumanoidRig(v, dt, elapsed, {
+                    speed: vSpeed,
+                    isCarrying: v.userData.carriedStone.visible
+                });
+            });
+
+            // 4.5. Zaya & Hathor Refakatçi (Companion) AI Takibi ve İyileştirme
+            if (gameState.companionActive && companionZaya.visible) {
+                const toPlayer = player.position.clone().sub(companionZaya.position);
+                toPlayer.y = 0;
+                const distP = toPlayer.length();
+                let zSpeed = 0;
+                if (distP > 3.2) {
+                    toPlayer.normalize();
+                    zSpeed = 6.2;
+                    companionZaya.position.addScaledVector(toPlayer, zSpeed * dt);
+                    companionZaya.rotation.y = Math.atan2(toPlayer.x, toPlayer.z);
+                }
+                animateHumanoidRig(companionZaya, dt, elapsed, { speed: zSpeed, isCarrying: false, isGod: false });
+                if (gameState.hp < gameState.maxHp && !gameState.inUnderworld) {
+                    gameState.hp = Math.min(gameState.maxHp, gameState.hp + dt * 3.5);
+                    updateHUD();
+                }
+            }
+
+            // 4.8. Dev Zırhlı Ateş Kobrası Hareketi ve Ateş Püskürtme Saldırısı
+            const cobraDist = player.position.distanceTo(giantFireCobra.position);
+            giantFireCobra.userData.segments.forEach((seg, i) => {
+                seg.position.x = Math.sin(elapsed * 4.5 - i * 0.55) * (0.35 + i * 0.08);
+            });
+            if (cobraDist < 22 && !gameState.inUnderworld && giantFireCobra.userData.hp > 0) {
+                const dirC = player.position.clone().sub(giantFireCobra.position);
+                dirC.y = 0;
+                giantFireCobra.rotation.y = Math.atan2(dirC.x, dirC.z);
+                if (dirC.length() > 5.0) {
+                    dirC.normalize();
+                    giantFireCobra.position.addScaledVector(dirC, 3.4 * dt);
+                } else {
+                    giantFireCobra.userData.breathTimer -= dt;
+                    if (giantFireCobra.userData.breathTimer <= 0) {
+                        giantFireCobra.userData.breathTimer = 1.4;
+                        spawnBloodBurstParticles(giantFireCobra.position, 10, 0xff3300);
+                        if (gameState.dodgeTimer <= 0) {
+                            gameState.hp = Math.max(0, gameState.hp - (gameState.isGodMode ? 8 : 16));
+                            updateHUD();
+                            if (gameState.hp <= 0) triggerPlayerDeath();
+                        }
+                    }
+                }
+            }
+
+            // 5. Vahşi Hayvanların Devriye ve Kuyruk/Kıskaç Animasyonu
+            wildBeasts.forEach((b, idx) => {
+                const angle = elapsed * 0.65 + idx * 1.8;
+                const targetX = b.userData.homePos.x + Math.sin(angle) * 4.5;
+                const targetZ = b.userData.homePos.z + Math.cos(angle) * 4.5;
+                const dx = targetX - b.position.x;
+                const dz = targetZ - b.position.z;
+                b.position.x += dx * dt;
+                b.position.z += dz * dt;
+                b.rotation.y = Math.atan2(dx, dz);
+                if (b.userData.tailPivot) {
+                    b.userData.tailPivot.rotation.y = Math.sin(elapsed * 4 + idx) * 0.35;
+                }
+            });
+
+            // 6. Tuzaklı Tapınak Sarkaç Bıçakları ve Hasar Kontrolü
+            pendulumTraps.forEach(pivot => {
+                const swingAngle = Math.sin(elapsed * 2.8 + pivot.userData.phaseOffset) * 0.95;
+                pivot.rotation.z = swingAngle;
+
+                // Bıçak dünya pozisyonu
+                const bladeWorldPos = new THREE.Vector3(
+                    Math.sin(swingAngle) * 6.8,
+                    9.5 - Math.cos(swingAngle) * 6.8,
+                    pivot.position.z
+                ).add(templeGroup.position);
+
+                if (!gameState.inUnderworld && gameState.dodgeTimer <= 0 && player.position.distanceTo(bladeWorldPos) < 2.2) {
+                    gameState.hp -= 35 * dt * 4;
+                    showToast('⚠️ Tapınak Tuzağına Yakalandın! Takla (💨) tuşunu kullan!');
+                    updateHUD();
+                    if (gameState.hp <= 0) triggerPlayerDeath();
+                }
+            });
+
+            // Horus'un Gözü Dönüşü
+            if (eyeOfHorusMesh.visible) {
+                eyeOfHorusMesh.rotation.y += dt * 2.2;
+                eyeOfHorusMesh.position.y = 2.75 + Math.sin(elapsed * 3) * 0.25;
+            }
+
+            // 7. Zalim Tanrı Set Boss AI ve Savaş
+            const distToSet = player.position.distanceTo(bossSet.position);
+            const bossHud = document.getElementById('boss-hud');
+            if (distToSet < 24 && !gameState.inUnderworld) {
+                bossHud.classList.remove('hidden');
+                document.getElementById('boss-name').textContent = gameState.setEyeStolen
+                    ? 'GÖZÜ ÇALINMIŞ SET (ZAYIFLAMIŞ FORM)'
+                    : 'ÇÖL TANRISI SET (2.5x İLAHİ FORM)';
+                document.getElementById('boss-hp-label').textContent = `${Math.ceil(bossSet.userData.hp)} / ${bossSet.userData.maxHp}`;
+                document.getElementById('boss-hp-bar').style.width = `${(bossSet.userData.hp / bossSet.userData.maxHp) * 100}%`;
+
+                // Set oyuncuya doğru yürür ve saldırır
+                const dirToPlayer = player.position.clone().sub(bossSet.position);
+                dirToPlayer.y = 0;
+                const dLen = dirToPlayer.length();
+                bossSet.rotation.y = Math.atan2(dirToPlayer.x, dirToPlayer.z);
+
+                if (dLen > 3.8) {
+                    dirToPlayer.normalize();
+                    bossSet.position.addScaledVector(dirToPlayer, 3.8 * dt);
+                    animateHumanoidRig(bossSet, dt, elapsed, { speed: 3.8, attackTimer: bossSet.userData.attackCooldown, isGod: !gameState.setEyeStolen });
+                } else {
+                    if (bossSet.userData.attackCooldown <= 0) {
+                        bossSet.userData.attackCooldown = 0.55;
+                        if (gameState.dodgeTimer <= 0) {
+                            const setDmg = gameState.setEyeStolen ? 8 : (gameState.isGodMode ? 10 : 22);
+                            gameState.hp = Math.max(0, gameState.hp - setDmg);
+                            updateHUD();
+                            if (gameState.hp <= 0) triggerPlayerDeath();
+                        }
+                    }
+                    animateHumanoidRig(bossSet, dt, elapsed, { speed: 0, attackTimer: bossSet.userData.attackCooldown, isGod: !gameState.setEyeStolen });
+                }
+                if (bossSet.userData.attackCooldown > 0) bossSet.userData.attackCooldown -= dt;
+            } else {
+                bossHud.classList.add('hidden');
+                animateHumanoidRig(bossSet, dt, elapsed, { speed: 0, isGod: !gameState.setEyeStolen });
+            }
+
+            // 8. Gökyüzünde Ra'nın Güneş Gemisi ve Apophis Yılanı Hareketi
+            solarBarque.position.x = Math.sin(elapsed * 0.25) * 28;
+            solarBarque.position.y = Math.cos(elapsed * 0.5) * 2.5;
+
+            if (gameState.isNightEvent) {
+                gameState.raPower = Math.max(0, gameState.raPower - dt * 1.8);
+                updateHUD();
+                if (gameState.raPower <= 0) {
+                    endApophisNightEvent(false);
+                }
+                // Apophis'in 20 eklemli gövdesinin dalgalanması
+                apophisSegments.forEach((seg, i) => {
+                    const phase = elapsed * 3.2 - i * 0.35;
+                    seg.position.set(
+                        solarBarque.position.x - 12 - i * 2.2 + Math.sin(phase) * 3.5,
+                        solarBarque.position.y + Math.cos(phase) * 4.2,
+                        Math.sin(phase * 0.7) * 4.0
+                    );
+                });
+            }
+
+            // 9. Anubis Animasyonu
+            animateHumanoidRig(anubisEntity, dt, elapsed, { speed: 0, isGod: true });
+            scaleBeam.rotation.z = Math.sin(elapsed * 2) * 0.18;
+
+            // 10. Üçüncü Şahıs (TPS) Kamera Takibi
+            const camDist = gameState.cameraDist * (gameState.isGodMode ? 1.55 : 1.0);
+            const targetHeight = player.position.y + 1.8 * gameState.scaleCurrent;
+            const camX = player.position.x - Math.sin(gameState.cameraYaw) * Math.cos(gameState.cameraPitch) * camDist;
+            const camZ = player.position.z - Math.cos(gameState.cameraYaw) * Math.cos(gameState.cameraPitch) * camDist;
+            const camY = targetHeight + Math.sin(gameState.cameraPitch) * camDist;
+
+            camera.position.lerp(new THREE.Vector3(camX, Math.max(1.2, camY), camZ), Math.min(1, dt * 10));
+            camera.lookAt(player.position.x, targetHeight, player.position.z);
+
+            // 11. Canlı Radar Mini-Harita Çizimi
+            drawRadarMiniMap();
+        }
+
+        const minimapCanvas = document.getElementById('minimap-canvas');
+        const minimapCtx = minimapCanvas ? minimapCanvas.getContext('2d') : null;
+
+        function drawRadarMiniMap() {
+            if (!minimapCtx) return;
+            const w = 84, h = 84, cx = 42, cy = 42;
+            minimapCtx.clearRect(0, 0, w, h);
+
+            // Arkaplan ve Nil Nehri şeridi
+            minimapCtx.fillStyle = '#181209';
+            minimapCtx.fillRect(0, 0, w, h);
+
+            const scale = 0.52;
+            const px = player.position.x;
+            const pz = player.position.z;
+
+            // Nil Nehri (X: -45 civarı)
+            const riverX = cx + (-45 - px) * scale;
+            minimapCtx.fillStyle = 'rgba(14, 107, 138, 0.55)';
+            minimapCtx.fillRect(riverX - 7, 0, 14, h);
+
+            // Tuzaklı Tapınak & Horus'un Gözü (Turkuaz)
+            if (eyeOfHorusMesh.visible) {
+                const ex = cx + (0 - px) * scale;
+                const ez = cy + (61 - pz) * scale;
+                minimapCtx.fillStyle = '#00f0ff';
+                minimapCtx.beginPath();
+                minimapCtx.arc(ex, ez, 4, 0, Math.PI * 2);
+                minimapCtx.fill();
+            }
+
+            // Dikilitaş (Altın Kare)
+            const ox = cx + (obeliskGroup.position.x - px) * scale;
+            const oz = cy + (obeliskGroup.position.z - pz) * scale;
+            minimapCtx.fillStyle = '#fbbf24';
+            minimapCtx.fillRect(ox - 3, oz - 3, 6, 6);
+
+            // Köylüler (Yeşil Noktalar)
+            minimapCtx.fillStyle = '#4ade80';
+            villagers.forEach(v => {
+                const vx = cx + (v.position.x - px) * scale;
+                const vz = cy + (v.position.z - pz) * scale;
+                minimapCtx.fillRect(vx - 1.5, vz - 1.5, 3, 3);
+            });
+
+            // Tanrı Set Boss (Kırmızı Nokta)
+            const sx = cx + (bossSet.position.x - px) * scale;
+            const sz = cy + (bossSet.position.z - pz) * scale;
+            minimapCtx.fillStyle = '#ef4444';
+            minimapCtx.beginPath();
+            minimapCtx.arc(sx, sz, 4.5, 0, Math.PI * 2);
+            minimapCtx.fill();
+
+            // Dev Ateş Kobrası (Turuncu Nokta)
+            const cbx = cx + (giantFireCobra.position.x - px) * scale;
+            const cbz = cy + (giantFireCobra.position.z - pz) * scale;
+            minimapCtx.fillStyle = '#f97316';
+            minimapCtx.beginPath();
+            minimapCtx.arc(cbx, cbz, 4, 0, Math.PI * 2);
+            minimapCtx.fill();
+
+            // Oyuncu (Merkezde Beyaz/Altın Ok)
+            minimapCtx.fillStyle = '#ffffff';
+            minimapCtx.beginPath();
+            minimapCtx.arc(cx, cy, 3.5, 0, Math.PI * 2);
+            minimapCtx.fill();
+        }
+
+        function animateLoop() {
+            requestAnimationFrame(animateLoop);
+            const dt = Math.min(0.05, clock.getDelta());
+            const elapsed = clock.getElapsedTime();
+            updateGame(dt, elapsed);
+            renderer.render(scene, camera);
+        }
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        window.onload = function () {
+            updateHUD();
+            showToast('☥ Mısır Tanrıları Dünyasına Hoş Geldin! Altın Kan topla, Tuzaklı Tapınaktan Gözü çal ve 2.5x Tanrıya dönüş!');
+            animateLoop();
+        };
+    </script>
+</body>
+</html>
