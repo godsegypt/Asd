@@ -9,13 +9,15 @@ Oyun şu an derleme aracı gerektirmeyen klasik tarayıcı scriptleriyle çalı�
 - `ui.js`: HUD, görev göstergesi, modal ve bildirimler.
 - `audio.js`: Web Audio ses efektleri.
 - `input.js`: dokunmatik joystick, kamera, klavye ve aksiyon butonları.
-- `../2.html`: mevcut Three.js dünya, varlıklar ve oyun mekaniğinin ana çekirdeği. Davranış riski yaratmamak için henüz tek parça olan bu alanlar yeni modüllere ihtiyaç oldukça taşınabilir.
+- `world-detail.js`: Nil köyü, pazar, ekili alanlar, kayık/su animasyonu, Ra'nın güneş gemisi ve Duat atmosferi için prosedürel sahne detayları.
+- `village-life.js`: meslek kıyafetleri ve araçları, altı düşük maliyetli köy sakini, yürüme ve iş animasyonları.
+- `../2.html`: Three.js dünya çekirdeği, temel varlıklar ve oyun mekaniği. Modüllere `world.root` üzerinden dünya grubu ve adlandırılmış `world` nesneleri sağlanır.
 
 ## Özellik ekleme
 
 1. `js/` altında özelliğe özel bir dosya oluştur.
 2. Özelliği `GameModules.register` ile kaydet.
-3. Dosyanın script etiketini `2.html` içindeki ana inline oyun scriptinden sonra ve `</body>` etiketinden önce ekle.
+3. Dosyanın script etiketini `2.html` içindeki ana inline oyun scriptinden sonra ve `</body>` etiketinden önce ekle. `world-detail.js` bu yükleme düzenini örnekler.
 4. Sahneye eklenen nesneleri veya olay dinleyicilerini `dispose` içinde temizle.
 
 ```js

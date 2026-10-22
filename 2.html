@@ -657,11 +657,17 @@
         const MATS = {
             skinMortal: new THREE.MeshStandardMaterial({ color: 0xb87648, roughness: 0.55, metalness: 0.08 }),
             skinVillager: new THREE.MeshStandardMaterial({ color: 0xa66438, roughness: 0.6, metalness: 0.05 }),
+            skinVillagerSun: new THREE.MeshStandardMaterial({ color: 0x955b3b, roughness: 0.7, metalness: 0.02 }),
+            skinVillagerRiver: new THREE.MeshStandardMaterial({ color: 0xc08056, roughness: 0.66, metalness: 0.02 }),
             skinSet: new THREE.MeshStandardMaterial({ color: 0x8f5230, roughness: 0.4, metalness: 0.2 }),
             linenWhite: new THREE.MeshStandardMaterial({ color: 0xf3ead8, roughness: 0.75, metalness: 0.02 }),
+            linenOcher: new THREE.MeshStandardMaterial({ color: 0xb98a4d, roughness: 0.86, metalness: 0.01 }),
+            linenIndigo: new THREE.MeshStandardMaterial({ color: 0x31566c, roughness: 0.78, metalness: 0.04 }),
+            linenReed: new THREE.MeshStandardMaterial({ color: 0x647146, roughness: 0.88, metalness: 0.01 }),
             linenCrimson: new THREE.MeshStandardMaterial({ color: 0x8c1d1d, roughness: 0.6, metalness: 0.1 }),
             linenThief: new THREE.MeshStandardMaterial({ color: 0x2c353d, roughness: 0.65, metalness: 0.1 }),
             divineGold: new THREE.MeshStandardMaterial({ color: 0xffcf40, roughness: 0.18, metalness: 0.92, emissive: 0x3a2500, emissiveIntensity: 0.35 }),
+            villagerCopper: new THREE.MeshStandardMaterial({ color: 0x9c6941, roughness: 0.52, metalness: 0.48 }),
             darkArmorSet: new THREE.MeshStandardMaterial({ color: 0x2a221b, roughness: 0.25, metalness: 0.88, emissive: 0x330800, emissiveIntensity: 0.3 }),
             lapisBlue: new THREE.MeshStandardMaterial({ color: 0x154c8a, roughness: 0.25, metalness: 0.6 }),
             turquoiseGlow: new THREE.MeshStandardMaterial({ color: 0x00f0ff, emissive: 0x00d8ff, emissiveIntensity: 0.9, roughness: 0.1 }),
@@ -904,7 +910,7 @@
             // Başlık / Saç + Altın Alın Bandı (Circlet)
             const hairHelm = new THREE.Mesh(
                 new THREE.SphereGeometry(0.19, 12, 10, 0, Math.PI * 2, 0, Math.PI * 0.62),
-                role === 'player' ? MATS.hairBlack : accentMat
+                role === 'player' || role === 'villager' ? MATS.hairBlack : accentMat
             );
             hairHelm.rotation.x = -0.18;
             hairHelm.position.y = 0.02;
@@ -912,14 +918,14 @@
 
             const headband = new THREE.Mesh(
                 new THREE.TorusGeometry(0.175, 0.018, 6, 16),
-                MATS.divineGold
+                role === 'villager' ? MATS.villagerCopper : MATS.divineGold
             );
             headband.rotation.x = Math.PI / 2 - 0.12;
             headband.position.y = 0.06;
             headGroup.add(headband);
 
             // Mısır Nemes Yan Kanatları
-            if (role !== 'player') {
+            if (role !== 'player' && role !== 'villager') {
                 const nemesFlaps = new THREE.Mesh(
                     new THREE.CylinderGeometry(0.20, 0.25, 0.28, 10, 1, true, Math.PI * 0.25, Math.PI * 1.5),
                     accentMat
@@ -2134,18 +2140,18 @@
         // Köylüler (Nil'de tarım yapan ve Dikilitaş'a taş taşıyan gerçek insan animasyonlu NPC'ler)
         const villagers = [];
         const villagerJobs = [
-            { start: new THREE.Vector3(-21, 0, -18), end: new THREE.Vector3(12, 0, -2), label: 'Köylü (Taş Taşıyıcı)' },
-            { start: new THREE.Vector3(-21, 0, 8), end: new THREE.Vector3(12, 0, 2), label: 'Köylü (Papirüs Çiftçisi)' },
-            { start: new THREE.Vector3(18, 0, -24), end: new THREE.Vector3(14, 0, -4), label: 'Köylü (Altın Madencisi)' },
-            { start: new THREE.Vector3(-18, 0, 22), end: new THREE.Vector3(-4, 0, -12), label: 'Köylü (Tapınak Hizmetkârı)' }
+            { profession: 'porter', start: new THREE.Vector3(-21, 0, -18), end: new THREE.Vector3(12, 0, -2), label: 'Taş Hamalı', cloth: MATS.linenOcher, skin: MATS.skinVillager },
+            { profession: 'farmer', start: new THREE.Vector3(-14, 0, 27), end: new THREE.Vector3(-14, 0, 34), label: 'Nil Çiftçisi', cloth: MATS.linenReed, skin: MATS.skinVillagerSun },
+            { profession: 'fisher', start: new THREE.Vector3(-38, 0, -12), end: new THREE.Vector3(-45, 0, -17), label: 'Nil Balıkçısı', cloth: MATS.linenIndigo, skin: MATS.skinVillagerRiver },
+            { profession: 'potter', start: new THREE.Vector3(-5, 0, -7), end: new THREE.Vector3(3, 0, -7), label: 'Pazar Çömlekçisi', cloth: MATS.linenWhite, skin: MATS.skinVillager }
         ];
 
         villagerJobs.forEach((job, idx) => {
             const v = createArticulatedEgyptianHuman({
                 role: 'villager',
-                skinMat: MATS.skinVillager,
-                clothMat: MATS.linenWhite,
-                accentMat: MATS.divineGold
+                skinMat: job.skin,
+                clothMat: job.cloth,
+                accentMat: MATS.villagerCopper
             });
             v.position.copy(job.start);
             // Sırtında/omzunda taş bloğu
@@ -2153,8 +2159,10 @@
             carriedStone.position.set(0, 0.55, 0.35);
             v.userData.rig.chestGroup.add(carriedStone);
             v.userData.job = job;
+            v.userData.profession = job.profession;
             v.userData.goingToWork = true;
             v.userData.carriedStone = carriedStone;
+            carriedStone.visible = job.profession === 'porter';
             v.userData.walkPhase = idx * 1.7;
             scene.add(v);
             villagers.push(v);
@@ -3116,22 +3124,28 @@
                 const dir = target.clone().sub(v.position);
                 const dist = dir.length();
                 const vSpeed = 3.2 * gameState.workerSpeedBoost;
-                if (dist < 1.2) {
+                v.userData.workTimer = Math.max(0, (v.userData.workTimer || 0) - dt);
+                v.userData.isWorking = v.userData.workTimer > 0;
+                if (dist < 1.2 && !v.userData.isWorking) {
                     v.userData.goingToWork = !v.userData.goingToWork;
-                    v.userData.carriedStone.visible = v.userData.goingToWork;
-                    if (!v.userData.goingToWork && gameState.obeliskProgress < 100) {
+                    v.userData.workTimer = v.userData.profession === 'farmer' ? 1.8 : 1.25;
+                    v.userData.isWorking = true;
+                    v.userData.carriedStone.visible = v.userData.profession === 'porter' && v.userData.goingToWork;
+                    if (v.userData.profession === 'porter' && !v.userData.goingToWork && gameState.obeliskProgress < 100) {
                         gameState.obeliskProgress = Math.min(100, gameState.obeliskProgress + 1);
                         obeliskShaft.scale.y = 0.5 + (gameState.obeliskProgress / 100) * 0.7;
                         updateHUD();
                     }
-                } else {
+                } else if (!v.userData.isWorking) {
                     dir.normalize();
                     v.position.addScaledVector(dir, vSpeed * dt);
                     v.rotation.y = Math.atan2(dir.x, dir.z);
                 }
                 animateHumanoidRig(v, dt, elapsed, {
-                    speed: vSpeed,
-                    isCarrying: v.userData.carriedStone.visible
+                    speed: v.userData.isWorking ? 0 : vSpeed,
+                    isCarrying: v.userData.profession === 'porter' && v.userData.goingToWork,
+                    workAction: v.userData.profession,
+                    isWorking: v.userData.isWorking
                 });
             });
 
@@ -3391,6 +3405,7 @@
                 renderer,
                 player,
                 world: {
+                    root: worldGroup,
                     obelisk: obeliskGroup,
                     temple: templeGroup,
                     traps: pendulumTraps,
@@ -3436,5 +3451,7 @@
     <script src="js/ui.js"></script>
     <script src="js/audio.js"></script>
     <script src="js/input.js"></script>
+    <script src="js/world-detail.js"></script>
+    <script src="js/village-life.js"></script>
 </body>
 </html>
