@@ -65,6 +65,7 @@ function closeModal(id) {
 
 function updateHUD() {
     document.getElementById('res-wheat').textContent = gameState.wheat;
+    document.getElementById('res-wood').textContent = gameState.wood;
     document.getElementById('res-stone').textContent = gameState.stone;
     document.getElementById('res-gold').textContent = gameState.gold;
     document.getElementById('res-golden-blood').textContent = gameState.goldenBlood;

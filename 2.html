@@ -146,7 +146,10 @@
                         <div class="flex items-center gap-0.5 shrink-0" title="Buğday ve Papirüs">
                             <span>🌾</span><span id="res-wheat" class="font-bold text-amber-200">12</span>
                         </div>
-                        <div class="flex items-center gap-0.5 shrink-0" title="Taş ve Odun">
+                        <div class="flex items-center gap-0.5 shrink-0" title="Odun">
+                            <span>🪵</span><span id="res-wood" class="font-bold text-orange-200">4</span>
+                        </div>
+                        <div class="flex items-center gap-0.5 shrink-0" title="Taş">
                             <span>🪨</span><span id="res-stone" class="font-bold text-stone-300">8</span>
                         </div>
                         <div class="flex items-center gap-0.5 shrink-0" title="Altın">
@@ -193,7 +196,7 @@
                         <div id="ra-power-bar" class="h-full bg-gradient-to-r from-orange-600 via-amber-400 to-yellow-200" style="width: 80%;"></div>
                     </div>
                     <span id="obelisk-progress-text" class="text-[9px] text-amber-200/80">🏛️%42</span>
-                    <span id="apophis-timer-text" class="hidden">Hazır</span>
+                    <span id="apophis-timer-text" class="text-[8px] sm:text-[9px] text-amber-200/80 whitespace-nowrap" title="Apophis etkinliğine kalan süre">Gece: 04:00:00</span>
                 </div>
             </div>
 
@@ -516,6 +519,50 @@
          * 1. GLOBAL OYUN DURUMU VE EKONOMİ SİSTEMİ
          ********************************************************************/
         const gameState = GameConfig.createInitialState();
+        const APOPHIS_INTERVAL_MS = 4 * 60 * 60 * 1000;
+        const APOPHIS_NEXT_EVENT_KEY = 'egypt-apophis-next-event';
+
+        function loadApophisNextAt() {
+            try {
+                const savedTime = Number(localStorage.getItem(APOPHIS_NEXT_EVENT_KEY));
+                if (Number.isFinite(savedTime) && savedTime > 0) return savedTime;
+            } catch (error) {
+                // Keep the timer usable when browser storage is unavailable.
+            }
+            const nextTime = Date.now() + APOPHIS_INTERVAL_MS;
+            saveApophisNextAt(nextTime);
+            return nextTime;
+        }
+
+        function saveApophisNextAt(timestamp) {
+            try {
+                localStorage.setItem(APOPHIS_NEXT_EVENT_KEY, String(timestamp));
+            } catch (error) {
+                // The event still runs for this session without persistent storage.
+            }
+        }
+
+        let nextApophisAt = loadApophisNextAt();
+
+        function scheduleNextApophisEvent() {
+            nextApophisAt = Date.now() + APOPHIS_INTERVAL_MS;
+            saveApophisNextAt(nextApophisAt);
+        }
+
+        function updateApophisTimer() {
+            const timerText = document.getElementById('apophis-timer-text');
+            if (!timerText) return;
+            if (gameState.isNightEvent) {
+                timerText.textContent = `Ra: %${Math.ceil(gameState.raPower)}`;
+                return;
+            }
+
+            const secondsLeft = Math.max(0, Math.ceil((nextApophisAt - Date.now()) / 1000));
+            const hours = String(Math.floor(secondsLeft / 3600)).padStart(2, '0');
+            const minutes = String(Math.floor((secondsLeft % 3600) / 60)).padStart(2, '0');
+            const seconds = String(secondsLeft % 60).padStart(2, '0');
+            timerText.textContent = `Gece: ${hours}:${minutes}:${seconds}`;
+        }
 
         /********************************************************************
          * 2. THREE.JS SAHNE, IŞIKLANDIRMA VE PROSEDÜREL DOKU ÜRETİCİSİ
@@ -1403,12 +1450,15 @@
         nileRiver.position.set(-45, -0.45, 0);
         worldGroup.add(nileRiver);
 
+        const palmTrees = [];
+
         // Hurma Ağaçları Üreticisi
         function createPalmTree(x, z) {
             const tree = new THREE.Group();
             tree.position.set(x, 0, z);
             const trunkMat = new THREE.MeshStandardMaterial({ color: 0x6e4928, roughness: 0.9 });
             const leafMat = new THREE.MeshStandardMaterial({ color: 0x3b6e28, roughness: 0.65, side: THREE.DoubleSide });
+            const frondPivots = [];
 
             const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.38, 5.2, 8), trunkMat);
             trunk.position.y = 2.6;
@@ -1424,8 +1474,14 @@
                 holder.rotation.y = (i / 7) * Math.PI * 2;
                 holder.add(frond);
                 tree.add(holder);
+                holder.userData.windPhase = i * 0.8 + z * 0.06;
+                frondPivots.push(holder);
             }
             worldGroup.add(tree);
+            tree.userData.frondPivots = frondPivots;
+            tree.userData.woodRemaining = 3;
+            tree.userData.regrowTimer = 0;
+            palmTrees.push(tree);
         }
 
         for (let z = -70; z <= 70; z += 14) {
@@ -1885,6 +1941,42 @@
         skyEventGroup.position.set(0, 44, -40);
         scene.add(skyEventGroup);
 
+        const nightSkyGroup = new THREE.Group();
+        const starPositions = new Float32Array(240 * 3);
+        for (let i = 0; i < 240; i++) {
+            starPositions[i * 3] = (Math.random() - 0.5) * 420;
+            starPositions[i * 3 + 1] = 24 + Math.random() * 150;
+            starPositions[i * 3 + 2] = (Math.random() - 0.5) * 420;
+        }
+        const starGeometry = new THREE.BufferGeometry();
+        starGeometry.setAttribute('position', new THREE.BufferAttribute(starPositions, 3));
+        const starField = new THREE.Points(starGeometry, new THREE.PointsMaterial({
+            color: 0xffe7b2,
+            size: 1.5,
+            sizeAttenuation: false,
+            transparent: true,
+            opacity: 0.82,
+            depthWrite: false,
+            fog: false
+        }));
+        nightSkyGroup.add(starField);
+        nightSkyGroup.visible = false;
+        scene.add(nightSkyGroup);
+
+        const eclipseGroup = new THREE.Group();
+        eclipseGroup.position.set(-25, 10, -18);
+        eclipseGroup.visible = false;
+        const eclipseDisc = new THREE.Mesh(
+            new THREE.SphereGeometry(5.2, 24, 18),
+            new THREE.MeshBasicMaterial({ color: 0x080512 })
+        );
+        const eclipseCorona = new THREE.Mesh(
+            new THREE.TorusGeometry(5.8, 0.16, 10, 48),
+            new THREE.MeshBasicMaterial({ color: 0xff8c42, transparent: true, opacity: 0.88, blending: THREE.AdditiveBlending })
+        );
+        eclipseGroup.add(eclipseDisc, eclipseCorona);
+        skyEventGroup.add(eclipseGroup);
+
         const solarBarque = new THREE.Group();
         const hull = new THREE.Mesh(
             new THREE.CylinderGeometry(1.4, 3.8, 16, 8),
@@ -1916,6 +2008,20 @@
             const seg = new THREE.Mesh(new THREE.SphereGeometry(radius, 12, 10), apophisMat);
             apophisGroup.add(seg);
             apophisSegments.push(seg);
+        }
+        const apophisEyeMat = new THREE.MeshBasicMaterial({ color: 0xff5b27 });
+        for (const side of [-1, 1]) {
+            const eye = new THREE.Mesh(new THREE.SphereGeometry(0.28, 10, 8), apophisEyeMat);
+            eye.position.set(side * 1.05, 0.78, 1.8);
+            apophisSegments[0].add(eye);
+
+            const horn = new THREE.Mesh(
+                new THREE.ConeGeometry(0.22, 1.1, 7),
+                apophisMat
+            );
+            horn.position.set(side * 1.35, 1.9, 0.65);
+            horn.rotation.z = side * -0.55;
+            apophisSegments[0].add(horn);
         }
         skyEventGroup.add(apophisGroup);
 
@@ -1973,6 +2079,57 @@
         });
         player.position.set(-10, 0, -6);
         scene.add(player);
+
+        const divineAuraGroup = new THREE.Group();
+        divineAuraGroup.visible = false;
+        player.add(divineAuraGroup);
+        const auraGoldMat = new THREE.MeshBasicMaterial({
+            color: 0xffd45a,
+            transparent: true,
+            opacity: 0.76,
+            blending: THREE.AdditiveBlending,
+            depthWrite: false
+        });
+        const auraBlueMat = new THREE.MeshBasicMaterial({
+            color: 0x54eaff,
+            transparent: true,
+            opacity: 0.58,
+            blending: THREE.AdditiveBlending,
+            depthWrite: false
+        });
+        const auraGroundRing = new THREE.Mesh(new THREE.TorusGeometry(1.45, 0.045, 8, 48), auraGoldMat);
+        auraGroundRing.rotation.x = Math.PI / 2;
+        auraGroundRing.position.y = 0.16;
+        divineAuraGroup.add(auraGroundRing);
+        const auraHaloRing = new THREE.Mesh(new THREE.TorusGeometry(0.95, 0.035, 8, 40), auraBlueMat);
+        auraHaloRing.position.y = 1.9;
+        auraHaloRing.rotation.set(0.35, 0, 0.35);
+        divineAuraGroup.add(auraHaloRing);
+        const auraOrbiters = [];
+        for (let i = 0; i < 4; i++) {
+            const orbiter = new THREE.Mesh(new THREE.OctahedronGeometry(0.14, 1), i % 2 ? auraBlueMat : auraGoldMat);
+            divineAuraGroup.add(orbiter);
+            auraOrbiters.push(orbiter);
+        }
+
+        const dustCount = 220;
+        const dustPositions = new Float32Array(dustCount * 3);
+        for (let i = 0; i < dustCount; i++) {
+            dustPositions[i * 3] = (Math.random() - 0.5) * 48;
+            dustPositions[i * 3 + 1] = 0.6 + Math.random() * 11;
+            dustPositions[i * 3 + 2] = (Math.random() - 0.5) * 48;
+        }
+        const dustGeometry = new THREE.BufferGeometry();
+        dustGeometry.setAttribute('position', new THREE.BufferAttribute(dustPositions, 3));
+        const sandDust = new THREE.Points(dustGeometry, new THREE.PointsMaterial({
+            color: 0xf6d18b,
+            size: 0.16,
+            transparent: true,
+            opacity: 0.38,
+            depthWrite: false,
+            sizeAttenuation: true
+        }));
+        scene.add(sandDust);
 
         // Köylüler (Nil'de tarım yapan ve Dikilitaş'a taş taşıyan gerçek insan animasyonlu NPC'ler)
         const villagers = [];
@@ -2219,8 +2376,8 @@
         }
 
         function toggleGodTransformation() {
-            if (!gameState.isGodMode && gameState.divinity < 25 && gameState.horusEyes < 1) {
-                showToast('Tanrı formuna yükselmek için en az 25 İlahi Güç veya Horus Gözü gerekli!');
+            if (!gameState.isGodMode && gameState.divinity < 100 && gameState.horusEyes < 1) {
+                showToast('Tanrı formuna yükselmek için 100 İlahi Güç veya Horus Gözü gerekli!');
                 return;
             }
             gameState.isGodMode = !gameState.isGodMode;
@@ -2469,7 +2626,11 @@
             const timerText = document.getElementById('apophis-timer-text');
 
             if (gameState.isNightEvent) {
+                scheduleNextApophisEvent();
                 apophisGroup.visible = true;
+                nightSkyGroup.visible = true;
+                eclipseGroup.visible = true;
+                sunDisc.material.color.setHex(0x8b5cf6);
                 gameState.raPower = 48;
                 scene.background.setHex(0x090414);
                 scene.fog.color.setHex(0x090414);
@@ -2487,12 +2648,15 @@
         function endApophisNightEvent(victory) {
             gameState.isNightEvent = false;
             apophisGroup.visible = false;
+            nightSkyGroup.visible = !victory;
+            eclipseGroup.visible = !victory;
             const skyLabel = document.getElementById('sky-state-label');
             const timerText = document.getElementById('apophis-timer-text');
 
             if (victory) {
                 gameState.darkAgePenalty = false;
                 gameState.raPower = 100;
+                sunDisc.material.color.setHex(0xfff099);
                 scene.background.setHex(0xdca968);
                 scene.fog.color.setHex(0xdca968);
                 sunLight.intensity = 1.45;
@@ -2678,19 +2842,40 @@
 
             // 5. Dikilitaş (Obelisk) İnşaatına Taş/Odun Teslim Etme
             if (pPos.distanceTo(obeliskGroup.position) < 6.5) {
-                if (gameState.stone >= 2) {
+                if (gameState.stone >= 2 && gameState.wood >= 2) {
                     gameState.stone -= 2;
+                    gameState.wood -= 2;
                     gameState.obeliskProgress = Math.min(100, gameState.obeliskProgress + 8);
                     gameState.divinity = Math.min(100, gameState.divinity + 15);
                     gameState.gold += 15;
                     obeliskShaft.scale.y = 0.5 + (gameState.obeliskProgress / 100) * 0.7;
-                    showToast('🏛️ Dikilitaş inşaatına taş eklendi! (+15 Altın, +15 İlahi Güç)');
+                    showToast('🏛️ Taş ve kereste dikilitaşa eklendi! (+15 Altın, +15 İlahi Güç)');
                     updateHUD();
                     return;
                 } else {
-                    showToast('Dikilitaş inşası için en az 2 Taş/Odun gerekli! Kayalardan kazabilirsin.');
+                    showToast('Dikilitaş için 2 Taş ve 2 Odun gerekli. Madenden taş, palmiyelerden odun topla.');
                     return;
                 }
+            }
+
+            // Palmiye hasadı: her ağaç üç kez odun verir, sonra yeniden büyür.
+            for (const palm of palmTrees) {
+                if (pPos.distanceTo(palm.position) >= 4.5) continue;
+                if (palm.userData.woodRemaining <= 0) {
+                    showToast('Bu palmiye yeniden büyüyor; başka bir ağaçtan odun topla.');
+                    return;
+                }
+                palm.userData.woodRemaining--;
+                gameState.wood += 2;
+                spawnBloodBurstParticles(palm.position, 9, 0xc98a45);
+                if (palm.userData.woodRemaining === 0) {
+                    palm.userData.regrowTimer = 24;
+                    palm.userData.frondPivots.forEach(frond => { frond.visible = false; });
+                }
+                spawnFloatingText(palm.position, '+2 🪵', '#f4bd70');
+                showToast(`🌴 Palmiye kesildi! +2 Odun (${palm.userData.woodRemaining} hasat kaldı)`);
+                updateHUD();
+                return;
             }
 
             // 6. Tarım (Buğday/Papirüs) ve Maden (Altın/Taş) Hasadı
@@ -2792,6 +2977,11 @@
                 if (gameState.specialAnimTimer <= 0) divineVfxGroup.visible = false;
             }
 
+            if (!gameState.isNightEvent && Date.now() >= nextApophisAt) {
+                toggleNightApophisEvent();
+            }
+            if (Math.floor(elapsed) !== Math.floor(elapsed - dt)) updateApophisTimer();
+
             // Canlı FPS ve GPU Draw-Call Performans Rozeti Güncellemesi
             const perfBadge = document.getElementById('fps-perf-badge');
             if (perfBadge && Math.floor(elapsed * 2) !== Math.floor((elapsed - dt) * 2)) {
@@ -2803,6 +2993,47 @@
             // 1. Oyuncu Boyut Geçişi (1.0x Ölümlü <-> 2.5x Tanrı)
             gameState.scaleCurrent += (gameState.scaleTarget - gameState.scaleCurrent) * Math.min(1, dt * 6);
             player.scale.setScalar(gameState.scaleCurrent);
+
+            divineAuraGroup.visible = gameState.isGodMode;
+            if (gameState.isGodMode) {
+                auraGroundRing.rotation.y += dt * 0.7;
+                auraHaloRing.rotation.y += dt * 1.1;
+                auraOrbiters.forEach((orbiter, index) => {
+                    const angle = elapsed * 1.6 + index * Math.PI / 2;
+                    orbiter.position.set(
+                        Math.cos(angle) * 1.35,
+                        1.05 + Math.sin(elapsed * 2 + index) * 0.42,
+                        Math.sin(angle) * 1.35
+                    );
+                    orbiter.rotation.x += dt * 2.4;
+                    orbiter.rotation.y += dt * 3.1;
+                });
+            }
+
+            for (let i = 0; i < dustCount; i++) {
+                const offset = i * 3;
+                dustPositions[offset] += dt * (0.65 + (i % 5) * 0.12);
+                dustPositions[offset + 1] += Math.sin(elapsed * 0.8 + i) * dt * 0.08;
+                dustPositions[offset + 2] -= dt * 0.24;
+                if (dustPositions[offset] > 24) dustPositions[offset] = -24;
+                if (dustPositions[offset + 2] < -24) dustPositions[offset + 2] = 24;
+            }
+            dustGeometry.attributes.position.needsUpdate = true;
+            sandDust.position.set(player.position.x, 0, player.position.z);
+            sandDust.material.color.setHex(gameState.isNightEvent ? 0x9b7acb : 0xf6d18b);
+
+            palmTrees.forEach(tree => {
+                tree.userData.frondPivots.forEach(frond => {
+                    frond.rotation.z = Math.sin(elapsed * 0.8 + frond.userData.windPhase) * 0.075;
+                });
+                if (tree.userData.regrowTimer > 0) {
+                    tree.userData.regrowTimer = Math.max(0, tree.userData.regrowTimer - dt);
+                    if (tree.userData.regrowTimer === 0) {
+                        tree.userData.woodRemaining = 3;
+                        tree.userData.frondPivots.forEach(frond => { frond.visible = true; });
+                    }
+                }
+            });
 
             // 2. Oyuncu Hareketi ve Kamera Yönüne Göre Yürüme
             const moveMag = Math.min(1, Math.hypot(inputX, inputZ));

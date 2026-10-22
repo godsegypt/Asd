@@ -12,10 +12,11 @@
             weaponDamage: 22,
 
             wheat: 12,
+            wood: 4,
             stone: 8,
             gold: 65,
             goldenBlood: 2,
-            horusEyes: 1,
+            horusEyes: 0,
 
             setTaxRate: 0.45,
             setEyeStolen: false,
