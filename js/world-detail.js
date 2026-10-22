@@ -185,6 +185,78 @@
             buildMarketStall(-5, -7, 0.08);
             buildMarketStall(3, -8, 0.47);
 
+            const templeFires = [];
+            function buildTemple(x, z, scale) {
+                const temple = new THREE.Group();
+                temple.position.set(x, 0, z);
+                root.add(temple);
+
+                addMesh(temple, box, materials.sunDriedBrick, [0, 2.1, 0], [5.2 * scale, 4.2, 3.6 * scale]);
+                addMesh(temple, box, materials.gold, [0, 4.55, 0], [4.6 * scale, 0.26, 0.18]);
+                addMesh(temple, box, materials.linen, [0, 5.2, 0], [2.75 * scale, 0.16, 2.1 * scale], [0.08, 0, 0]);
+                addMesh(temple, box, materials.timber, [0, 1.45, 1.83 * scale], [1.18 * scale, 2.75, 0.08]);
+                for (const side of [-1, 1]) {
+                    addMesh(temple, box, materials.gold, [side * 0.72 * scale, 1.52, 1.9 * scale], [0.12 * scale, 3.05, 0.12]);
+                    addMesh(temple, new THREE.TorusGeometry(0.34 * scale, 0.055 * scale, 8, 20), materials.gold,
+                        [side * 1.2 * scale, 3.75, 1.87 * scale]);
+                }
+
+                for (let column = -2; column <= 2; column++) {
+                    addMesh(temple, cylinder, materials.sunDriedBrick, [column * 1.2 * scale, 2.4, -0.5 * scale], [0.18 * scale, 4.8, 0.18 * scale]);
+                    addMesh(temple, box, materials.gold, [column * 1.2 * scale, 4.3, -0.5 * scale], [0.2 * scale, 0.14, 0.2 * scale]);
+                }
+
+                for (const side of [-1, 1]) {
+                    addMesh(temple, box, materials.sunDriedBrick, [side * 2.05 * scale, 2.8, 0], [0.24 * scale, 3.7, 2.35 * scale]);
+                    addMesh(temple, new THREE.ConeGeometry(0.7 * scale, 2.1 * scale, 4), materials.gold, [side * 2.4 * scale, 5.25, 0], [1, 1, 1]);
+                }
+
+                for (let step = 0; step < 8; step++) {
+                    const pathTile = addMesh(temple, box, step % 2 ? materials.mud : materials.sunDriedBrick,
+                        [0, 0.08, (3.1 + step * 0.9) * scale], [3.7 * scale, 0.16, 0.82 * scale]);
+                    pathTile.receiveShadow = true;
+                }
+
+                for (const side of [-1, 1]) {
+                    const obelisk = new THREE.Group();
+                    obelisk.position.set(side * 3.9 * scale, 0, 4.1 * scale);
+                    obelisk.rotation.y = Math.PI / 4;
+                    temple.add(obelisk);
+                    addMesh(obelisk, box, materials.sunDriedBrick, [0, 0.34 * scale, 0], [0.92 * scale, 0.68 * scale, 0.92 * scale]);
+                    addMesh(obelisk, new THREE.CylinderGeometry(0.13 * scale, 0.34 * scale, 3.45 * scale, 4), materials.gold,
+                        [0, 2.38 * scale, 0]);
+                    addMesh(obelisk, new THREE.ConeGeometry(0.34 * scale, 0.72 * scale, 4), materials.gold,
+                        [0, 4.46 * scale, 0]);
+                    for (let mark = 0; mark < 3; mark++) {
+                        addMesh(obelisk, box, materials.blueGlaze,
+                            [0, (1.15 + mark * 0.82) * scale, 0.255 * scale], [0.12 * scale, 0.28 * scale, 0.035 * scale]);
+                    }
+
+                    const torch = new THREE.Group();
+                    torch.position.set(side * 1.8 * scale, 0, 2.2 * scale);
+                    temple.add(torch);
+                    addMesh(torch, cylinder, materials.timber, [0, 0.88 * scale, 0], [0.16 * scale, 1.76 * scale, 0.16 * scale]);
+                    const flame = addMesh(torch, new THREE.ConeGeometry(0.22 * scale, 0.62 * scale, 6), materials.gold,
+                        [0, 1.95 * scale, 0]);
+                    const light = new THREE.PointLight(0xffa64d, 0.9, 10 * scale, 2);
+                    light.position.set(0, 2 * scale, 0);
+                    torch.add(light);
+                    templeFires.push({ flame, light, phase: templeFires.length * 1.9, scale });
+                }
+
+                const shrine = new THREE.Group();
+                shrine.position.set(0, 0.2, 1.5 * scale);
+                temple.add(shrine);
+                addMesh(shrine, box, materials.blueGlaze, [0, 1.1, 0], [1.4 * scale, 2.2, 0.7 * scale]);
+                addMesh(shrine, new THREE.CylinderGeometry(0.46 * scale, 0.58 * scale, 1.4 * scale, 12), materials.gold, [0, 2.2, 0]);
+                addMesh(shrine, new THREE.ConeGeometry(0.38 * scale, 1.2 * scale, 8), materials.gold, [0, 3.55, 0]);
+
+                return temple;
+            }
+
+            buildTemple(18, -32, 1.2);
+            buildTemple(-20, -38, 1.05);
+
             const cropGeometry = new THREE.ConeGeometry(0.14, 1.25, 5);
             cropGeometry.translate(0, 0.62, 0);
             const cropInstances = new THREE.InstancedMesh(cropGeometry, new THREE.MeshStandardMaterial({ color: 0x8c9c3d, roughness: 0.83 }), 96);
@@ -386,6 +458,11 @@
                 solarBarque.userData.sail.rotation.z = Math.sin(elapsedTime * 0.7) * 0.035;
                 sunRays.forEach((ray, index) => {
                     ray.scale.y = 0.82 + (Math.sin(elapsedTime * 2.3 + index) + 1) * 0.14;
+                });
+                templeFires.forEach(({ flame, light, phase, scale }) => {
+                    const flicker = 0.82 + Math.sin(elapsedTime * 8 + phase) * 0.18;
+                    flame.scale.y = scale * flicker;
+                    light.intensity = 0.65 + flicker * 0.55;
                 });
                 torchFires.forEach(({ flame, light, phase }) => {
                     const flicker = 0.82 + Math.sin(elapsedTime * 7 + phase) * 0.18;

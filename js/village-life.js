@@ -1,6 +1,6 @@
 (function () {
     GameModules.register('village-life', {
-        setup({ scene, world }) {
+        setup({ scene, world, factories }) {
             const palettes = {
                 farmer: { cloth: 0x657347, wrap: 0xc29a59, skin: 0x9b6040, accent: 0xb67940 },
                 fisher: { cloth: 0x315b69, wrap: 0x8c5e43, skin: 0xb87b56, accent: 0x547e7e },
@@ -10,11 +10,8 @@
                 merchant: { cloth: 0x874c67, wrap: 0xdda75a, skin: 0xb77b54, accent: 0xb58c51 }
             };
             const shared = {
-                sphere: new THREE.SphereGeometry(1, 9, 7),
                 box: new THREE.BoxGeometry(1, 1, 1),
                 limb: new THREE.CylinderGeometry(0.085, 0.065, 0.36, 6),
-                foot: new THREE.BoxGeometry(0.14, 0.07, 0.24),
-                skirt: new THREE.CylinderGeometry(0.2, 0.31, 0.55, 8),
                 pot: new THREE.LatheGeometry([
                     new THREE.Vector2(0.08, 0), new THREE.Vector2(0.22, 0.1),
                     new THREE.Vector2(0.29, 0.34), new THREE.Vector2(0.2, 0.57),
@@ -103,6 +100,7 @@
                 if (profession === 'porter' || profession === 'scribe') rig.headGroup.add(beard);
                 villager.userData.profession = profession;
                 villager.userData.lifePhase = index * 1.37;
+                villager.scale.setScalar(0.92 + (index % 4) * 0.045);
             }
 
             (world.villagers || []).forEach((villager, index) => {
@@ -111,93 +109,69 @@
 
             function makeCitizen(spec, index) {
                 const palette = palettes[spec.profession];
-                const root = new THREE.Group();
-                const skin = makeMaterial(palette.skin);
-                const cloth = makeMaterial(palette.cloth, 0.86);
-                const wrap = makeMaterial(palette.wrap, 0.9);
-                const dark = makeMaterial(0x241d1a, 0.92);
-                const accent = makeMaterial(palette.accent, 0.58);
-
-                const hip = new THREE.Group();
-                hip.position.y = 0.87;
-                root.add(hip);
-                addMesh(hip, shared.skirt, cloth, [0, -0.13, 0], [1, 1, 0.82]);
-                addMesh(hip, shared.box, accent, [0, 0.15, 0.2], [0.5, 0.08, 0.08]);
-
-                const torso = addMesh(root, shared.sphere, skin, [0, 1.34, 0], [0.34, 0.46, 0.24]);
-                torso.castShadow = true;
-                addMesh(root, shared.sphere, cloth, [0, 1.16, 0.005], [0.38, 0.43, 0.255]);
-                addMesh(root, shared.box, accent, [0, 1.56, 0.22], [0.54, 0.1, 0.06]);
-
-                const head = new THREE.Group();
-                head.position.set(0, 1.9, 0);
-                root.add(head);
-                addMesh(head, shared.sphere, skin, [0, 0, 0], [0.18, 0.22, 0.17]);
-                addMesh(head, new THREE.SphereGeometry(0.195, 8, 6, 0, Math.PI * 2, 0, Math.PI * 0.52), dark, [0, 0.045, -0.015], [1, 0.85, 1]);
-                addMesh(head, shared.box, wrap, [0, 0.125, -0.025], [0.34, 0.1, 0.35]);
-                addMesh(head, shared.box, accent, [0, 0.083, 0.157], [0.3, 0.027, 0.025]);
-                for (const side of [-1, 1]) {
-                    addMesh(head, shared.sphere, dark, [side * 0.065, 0.012, 0.155], [0.025, 0.018, 0.015]);
-                    addMesh(head, shared.sphere, accent, [side * 0.19, -0.015, 0], [0.045, 0.055, 0.04]);
-                }
-
-                const arms = [];
-                const legs = [];
-                for (const side of [-1, 1]) {
-                    const arm = new THREE.Group();
-                    arm.position.set(side * 0.34, 1.55, 0);
-                    root.add(arm);
-                    addMesh(arm, shared.limb, skin, [0, -0.16, 0], [1, 1.15, 1]);
-                    const forearm = new THREE.Group();
-                    forearm.position.y = -0.34;
-                    arm.add(forearm);
-                    addMesh(forearm, shared.limb, skin, [0, -0.14, 0], [0.82, 0.95, 0.82]);
-                    addMesh(forearm, shared.sphere, skin, [0, -0.33, 0.02], [0.075, 0.08, 0.07]);
-                    addMesh(arm, new THREE.TorusGeometry(0.083, 0.014, 5, 10), accent, [0, -0.33, 0], [1, 1, 0.8], [Math.PI / 2, 0, 0]);
-                    arms.push({ upper: arm, forearm });
-
-                    const leg = new THREE.Group();
-                    leg.position.set(side * 0.13, 0.72, 0);
-                    root.add(leg);
-                    addMesh(leg, shared.limb, skin, [0, -0.2, 0], [1.25, 1.4, 1.25]);
-                    addMesh(leg, shared.foot, skin, [0, -0.43, 0.07]);
-                    addMesh(leg, shared.box, accent, [0, -0.45, 0.08], [0.16, 0.025, 0.27]);
-                    legs.push(leg);
-                }
+                const root = factories.createArticulatedEgyptianHuman({
+                    role: 'villager',
+                    skinMat: makeMaterial(palette.skin, 0.7),
+                    clothMat: makeMaterial(palette.cloth, 0.86),
+                    accentMat: makeMaterial(palette.accent, 0.58)
+                });
+                root.position.set(spec.from[0], spec.from[1], spec.from[2]);
+                root.userData.profession = spec.profession;
+                root.userData.lifePhase = index * 1.19;
+                dressRigVillager(root, spec.profession, index + 10);
+                const rig = root.userData.rig;
 
                 if (spec.profession === 'porter') {
-                    addMesh(root, shared.box, makeMaterial(0x7c5839), [0, 1.36, -0.25], [0.42, 0.48, 0.25]);
+                    const pack = new THREE.Group();
+                    pack.position.set(0, 0.18, -0.24);
+                    rig.chestGroup.add(pack);
+                    addMesh(pack, shared.box, makeMaterial(0x7c5839), [0, 0.02, 0], [0.42, 0.48, 0.25]);
+                    for (let bundle = 0; bundle < 3; bundle++) {
+                        addMesh(pack, shared.limb, makeMaterial(0x755638), [-0.12 + bundle * 0.12, 0.34, -0.02], [0.56, 0.8, 0.56], [0, 0, (bundle - 1) * 0.13]);
+                    }
                 } else if (spec.profession === 'farmer') {
                     const tool = new THREE.Group();
                     addMesh(tool, shared.limb, makeMaterial(0x553c27), [0, 0.1, 0], [0.62, 1.5, 0.62]);
-                    addMesh(tool, shared.box, accent, [0, 0.48, 0], [0.7, 0.1, 0.12]);
-                    tool.position.set(0.39, 0.68, 0.12);
-                    root.add(tool);
+                    addMesh(tool, shared.box, makeMaterial(palette.accent), [0, 0.48, 0], [0.7, 0.1, 0.12]);
+                    tool.position.set(0, -0.15, 0.1);
+                    rig.rightArm.handGroup.add(tool);
                     spec.tool = tool;
                 } else if (spec.profession === 'fisher') {
                     const net = new THREE.Group();
-                    net.position.set(0, 1.3, -0.29);
-                    root.add(net);
+                    net.position.set(0, 0.16, -0.28);
+                    rig.chestGroup.add(net);
                     for (let line = -2; line <= 2; line++) {
-                        addMesh(net, shared.box, accent, [line * 0.08, 0, 0], [0.014, 0.62, 0.014], [0, 0, line * 0.12]);
-                        addMesh(net, shared.box, accent, [0, line * 0.1, 0.01], [0.35, 0.014, 0.014], [0, 0, line * 0.08]);
+                        addMesh(net, shared.box, makeMaterial(0xb5a177), [line * 0.08, 0, 0], [0.014, 0.62, 0.014], [0, 0, line * 0.12]);
+                        addMesh(net, shared.box, makeMaterial(0xb5a177), [0, line * 0.1, 0.01], [0.35, 0.014, 0.014], [0, 0, line * 0.08]);
                     }
+                    addMesh(rig.leftArm.handGroup, shared.limb, makeMaterial(0x674a2d), [0, 0.1, 0.1], [0.75, 1.2, 0.75], [0, 0, 0.18]);
+                    addMesh(rig.leftArm.handGroup, shared.box, makeMaterial(palette.accent), [0, -0.4, 0.12], [0.42, 0.08, 0.17], [0, 0, 0.18]);
                 } else if (spec.profession === 'potter') {
+                    const tray = new THREE.Group();
+                    tray.position.set(-0.5, 0.16, -0.1);
+                    rig.leftArm.shoulderPivot.add(tray);
+                    addMesh(tray, shared.box, makeMaterial(0x67462d), [0, -0.24, 0.08], [0.48, 0.07, 0.32]);
                     for (let jar = 0; jar < 2; jar++) {
                         const pot = new THREE.Mesh(shared.pot, makeMaterial(jar ? 0xc17b4d : 0x93513a));
-                        pot.position.set(jar * 0.35 - 0.2, 0.05, 0.36);
-                        pot.scale.setScalar(0.72);
-                        root.add(pot);
+                        pot.position.set(jar * 0.22 - 0.12, -0.13, 0.08);
+                        pot.scale.setScalar(0.34);
+                        tray.add(pot);
                     }
                 } else if (spec.profession === 'scribe') {
-                    addMesh(root, shared.box, makeMaterial(0xd8c7a1), [0, 1.2, 0.3], [0.32, 0.36, 0.06], [0.18, 0, 0]);
+                    const tablet = addMesh(rig.leftArm.handGroup, shared.box, makeMaterial(0xd8c7a1), [0, -0.04, 0.1], [0.26, 0.36, 0.055], [0.18, 0, 0]);
+                    addMesh(tablet, shared.box, makeMaterial(0x67462d), [0, 0, 0.55], [0.06, 0.72, 0.1]);
                 } else {
-                    addMesh(root, shared.pot, makeMaterial(0xb46a42), [0.36, 0.18, 0.12], [0.8, 0.8, 0.8]);
+                    const basket = new THREE.Group();
+                    basket.position.set(0.4, -0.11, 0.08);
+                    rig.leftArm.handGroup.add(basket);
+                    addMesh(basket, shared.pot, makeMaterial(0xb46a42), [0, 0, 0], [0.72, 0.72, 0.72]);
+                    for (let fruit = 0; fruit < 3; fruit++) {
+                        addMesh(basket, shared.sphere, makeMaterial(fruit === 1 ? 0x6d8141 : 0xd79a41), [-0.12 + fruit * 0.12, 0.3, 0.05], [0.1, 0.1, 0.1]);
+                    }
                 }
 
-                root.position.set(spec.from[0], spec.from[1], spec.from[2]);
                 world.root.add(root);
-                crowd.push({ root, arms, legs, head, spec, phase: index * 1.19 });
+                crowd.push({ root, spec, phase: index * 1.19 });
             }
 
             const citizenRoutes = [
@@ -210,8 +184,8 @@
             ];
             citizenRoutes.forEach(makeCitizen);
 
-            this.update = function (_context, _deltaTime, elapsedTime) {
-                crowd.forEach(({ root, arms, legs, head, spec, phase }) => {
+            this.update = function (_context, deltaTime, elapsedTime) {
+                crowd.forEach(({ root, spec, phase }) => {
                     const cycle = elapsedTime * spec.speed + phase;
                     const progress = (Math.sin(cycle) + 1) * 0.5;
                     const moving = Math.abs(Math.cos(cycle)) > 0.32;
@@ -221,18 +195,26 @@
                         spec.from[2] + (spec.to[2] - spec.from[2]) * progress
                     );
                     root.rotation.y = Math.atan2(spec.to[0] - spec.from[0], spec.to[2] - spec.from[2]);
-                    const stride = moving ? Math.sin(elapsedTime * 5.2 + phase) * 0.46 : 0;
-                    legs[0].rotation.x = stride;
-                    legs[1].rotation.x = -stride;
-                    arms[0].upper.rotation.x = -stride * 0.55;
-                    arms[1].upper.rotation.x = stride * 0.55;
+                    factories.animateHumanoidRig(root, deltaTime, elapsedTime, {
+                        speed: moving ? 2.7 : 0,
+                        isCarrying: spec.profession === 'porter',
+                        workAction: spec.profession,
+                        isWorking: !moving
+                    });
+                    const rig = root.userData.rig;
                     const task = Math.sin(elapsedTime * 2.6 + phase) * 0.32;
-                    if (!moving && spec.profession === 'farmer') arms[0].upper.rotation.x = -0.6 - Math.max(0, task);
-                    if (!moving && spec.profession === 'fisher') arms[1].upper.rotation.x = -0.45 + task;
-                    if (!moving && spec.profession === 'scribe') head.rotation.x = 0.12 + Math.max(0, task) * 0.3;
-                    else head.rotation.x = Math.sin(elapsedTime * 0.9 + phase) * 0.035;
+                    if (!moving && spec.profession === 'farmer') {
+                        rig.spineGroup.rotation.x = 0.08 + Math.max(0, task) * 0.2;
+                        rig.rightArm.shoulderPivot.rotation.x = -0.45 - Math.max(0, task) * 0.62;
+                    } else if (!moving && spec.profession === 'fisher') {
+                        rig.leftArm.shoulderPivot.rotation.x = -0.25 + task * 0.32;
+                        rig.rightArm.shoulderPivot.rotation.x = -0.18 - task * 0.18;
+                    } else if (!moving && spec.profession === 'potter') {
+                        rig.leftArm.shoulderPivot.rotation.x = -0.72 + Math.sin(elapsedTime * 2 + phase) * 0.08;
+                    } else if (!moving && spec.profession === 'scribe') {
+                        rig.headGroup.rotation.x = 0.12 + Math.max(0, task) * 0.3;
+                    }
                     if (spec.tool) spec.tool.rotation.z = Math.sin(elapsedTime * 2.6 + phase) * 0.22;
-                    root.position.y = Math.abs(stride) * 0.035;
                 });
 
                 (world.villagers || []).forEach((villager, index) => {

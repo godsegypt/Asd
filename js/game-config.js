@@ -45,6 +45,7 @@
             attackAnimTimer: 0,
             comboStage: 0,
             dodgeTimer: 0,
+            divineTransformTimer: 0,
             specialAnimTimer: 0,
             walkCycle: 0
         };

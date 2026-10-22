@@ -866,12 +866,14 @@
             neckGroup.add(headGroup);
 
             // Kafatası ve Çene Hattı
+            const mortalFaceParts = [];
             const cranium = new THREE.Mesh(
                 new THREE.SphereGeometry(0.18, 14, 12),
                 skinMat
             );
             cranium.scale.set(0.92, 1.08, 0.98);
             headGroup.add(cranium);
+            mortalFaceParts.push(cranium);
 
             const jawline = new THREE.Mesh(
                 new THREE.CylinderGeometry(0.135, 0.09, 0.14, 10),
@@ -879,6 +881,7 @@
             );
             jawline.position.set(0, -0.1, 0.03);
             headGroup.add(jawline);
+            mortalFaceParts.push(jawline);
 
             // Burun Kemeri ve Gözler
             const nose = new THREE.Mesh(
@@ -888,6 +891,7 @@
             nose.position.set(0, -0.01, 0.185);
             nose.rotation.x = Math.PI * 0.42;
             headGroup.add(nose);
+            mortalFaceParts.push(nose);
 
             const eyeMat = (role === 'set_boss' || role === 'anubis') ? MATS.turquoiseGlow : MATS.hairBlack;
             for (let side of [-1, 1]) {
@@ -898,6 +902,7 @@
                 eyeWhite.scale.set(1.3, 0.75, 0.6);
                 eyeWhite.position.set(side * 0.065, 0.035, 0.16);
                 headGroup.add(eyeWhite);
+                mortalFaceParts.push(eyeWhite);
 
                 const pupil = new THREE.Mesh(
                     new THREE.SphereGeometry(0.015, 6, 6),
@@ -905,6 +910,7 @@
                 );
                 pupil.position.set(side * 0.065, 0.035, 0.178);
                 headGroup.add(pupil);
+                mortalFaceParts.push(pupil);
             }
 
             // Başlık / Saç + Altın Alın Bandı (Circlet)
@@ -915,6 +921,7 @@
             hairHelm.rotation.x = -0.18;
             hairHelm.position.y = 0.02;
             headGroup.add(hairHelm);
+            mortalFaceParts.push(hairHelm);
 
             const headband = new THREE.Mesh(
                 new THREE.TorusGeometry(0.175, 0.018, 6, 16),
@@ -923,6 +930,80 @@
             headband.rotation.x = Math.PI / 2 - 0.12;
             headband.position.y = 0.06;
             headGroup.add(headband);
+            mortalFaceParts.push(headband);
+
+            const deityMaskGroup = new THREE.Group();
+            deityMaskGroup.visible = false;
+            headGroup.add(deityMaskGroup);
+
+            function addMaskPart(parent, geometry, material, position, scale, rotation) {
+                const mesh = new THREE.Mesh(geometry, material);
+                mesh.position.set(position[0], position[1], position[2]);
+                if (scale) mesh.scale.set(scale[0], scale[1], scale[2]);
+                if (rotation) mesh.rotation.set(rotation[0], rotation[1], rotation[2]);
+                parent.add(mesh);
+                return mesh;
+            }
+
+            const deityMasks = {};
+            const horusMask = new THREE.Group();
+            deityMaskGroup.add(horusMask);
+            addMaskPart(horusMask, new THREE.SphereGeometry(0.195, 12, 10), MATS.divineGold, [0, 0.035, 0.08], [1.02, 1.08, 0.88]);
+            addMaskPart(horusMask, new THREE.ConeGeometry(0.12, 0.46, 6), MATS.divineGold, [0, -0.075, 0.34], [1, 1.1, 1], [Math.PI / 2, 0, 0]);
+            addMaskPart(horusMask, new THREE.BoxGeometry(0.38, 0.055, 0.06), MATS.lapisBlue, [0, 0.11, 0.16]);
+            for (const side of [-1, 1]) {
+                addMaskPart(horusMask, new THREE.TorusGeometry(0.068, 0.018, 6, 14), MATS.lapisBlue, [side * 0.09, 0.035, 0.22], [1, 0.78, 1], [0, 0, side * -0.18]);
+                addMaskPart(horusMask, new THREE.ConeGeometry(0.048, 0.46, 5), side < 0 ? MATS.divineGold : MATS.lapisBlue, [side * 0.13, 0.31, -0.02], [1, 1, 0.8], [0, 0, side * -0.18]);
+            }
+            addMaskPart(horusMask, new THREE.OctahedronGeometry(0.09, 0), MATS.turquoiseGlow, [0, 0.25, 0.18]);
+            deityMasks.horus = horusMask;
+
+            function buildJackalMask(armorMaterial, trimMaterial, eyeMaterial) {
+                const mask = new THREE.Group();
+                addMaskPart(mask, new THREE.SphereGeometry(0.195, 12, 10), armorMaterial, [0, 0.035, 0.075], [1.03, 1.08, 0.92]);
+                addMaskPart(mask, new THREE.ConeGeometry(0.12, 0.62, 6), armorMaterial, [0, -0.1, 0.37], [0.8, 0.82, 1.05], [Math.PI / 2, 0, 0]);
+                addMaskPart(mask, new THREE.SphereGeometry(0.13, 8, 6), trimMaterial, [0, -0.19, 0.36], [1.15, 0.62, 0.65]);
+                addMaskPart(mask, new THREE.BoxGeometry(0.34, 0.055, 0.055), trimMaterial, [0, 0.105, 0.18]);
+                for (const side of [-1, 1]) {
+                    addMaskPart(mask, new THREE.ConeGeometry(0.07, 0.64, 5), armorMaterial, [side * 0.145, 0.38, -0.045], [1, 1, 0.8], [0, 0, side * -0.12]);
+                    addMaskPart(mask, new THREE.SphereGeometry(0.027, 6, 5), eyeMaterial, [side * 0.09, 0.035, 0.231], [1.2, 0.8, 0.55]);
+                    addMaskPart(mask, new THREE.SphereGeometry(0.024, 6, 5), MATS.hairBlack, [side * 0.09, -0.19, 0.442]);
+                    addMaskPart(mask, new THREE.BoxGeometry(0.055, 0.24, 0.035), trimMaterial, [side * 0.17, -0.03, 0.18], [1, 1, 1], [0, 0, side * 0.24]);
+                }
+                addMaskPart(mask, new THREE.ConeGeometry(0.045, 0.28, 5), trimMaterial, [0, 0.2, 0.11]);
+                return mask;
+            }
+
+            const setMask = buildJackalMask(MATS.darkArmorSet, MATS.linenCrimson, MATS.goldenBloodMat);
+            deityMaskGroup.add(setMask);
+            deityMasks.set = setMask;
+
+            const apisMask = new THREE.Group();
+            deityMaskGroup.add(apisMask);
+            addMaskPart(apisMask, new THREE.SphereGeometry(0.21, 12, 10), MATS.divineGold, [0, 0.035, 0.06], [1.25, 1.05, 0.95]);
+            addMaskPart(apisMask, new THREE.SphereGeometry(0.17, 10, 8), MATS.divineGold, [0, -0.115, 0.24], [1.22, 0.78, 0.84]);
+            addMaskPart(apisMask, new THREE.TorusGeometry(0.19, 0.055, 8, 20, Math.PI), MATS.divineGold, [-0.22, 0.23, -0.02], [1, 1.15, 1], [Math.PI / 2, 0, -0.48]);
+            addMaskPart(apisMask, new THREE.TorusGeometry(0.19, 0.055, 8, 20, Math.PI), MATS.divineGold, [0.22, 0.23, -0.02], [1, 1.15, 1], [Math.PI / 2, 0, 0.48]);
+            for (const side of [-1, 1]) {
+                addMaskPart(apisMask, new THREE.SphereGeometry(0.032, 6, 5), MATS.darkArmorSet, [side * 0.13, -0.105, 0.36]);
+                addMaskPart(apisMask, new THREE.TorusGeometry(0.065, 0.018, 5, 12), MATS.lapisBlue, [side * 0.1, 0.045, 0.27], [1, 0.8, 1]);
+                addMaskPart(apisMask, new THREE.ConeGeometry(0.06, 0.35, 5), MATS.lapisBlue, [side * 0.16, 0.31, -0.04], [1, 1, 1], [0, 0, side * -0.3]);
+            }
+            addMaskPart(apisMask, new THREE.OctahedronGeometry(0.095, 1), MATS.turquoiseGlow, [0, 0.29, 0.14]);
+            deityMasks.apis = apisMask;
+
+            const anubisMask = buildJackalMask(MATS.darkArmorSet, MATS.divineGold, MATS.turquoiseGlow);
+            deityMaskGroup.add(anubisMask);
+            deityMasks.anubis = anubisMask;
+
+            const defaultMask = role === 'set_boss' ? 'set' : role === 'anubis' ? 'anubis' : null;
+            if (defaultMask) {
+                deityMaskGroup.visible = true;
+                mortalFaceParts.forEach(part => { part.visible = false; });
+                Object.entries(deityMasks).forEach(([name, mask]) => {
+                    mask.visible = name === defaultMask;
+                });
+            }
 
             // Mısır Nemes Yan Kanatları
             if (role !== 'player' && role !== 'villager') {
@@ -936,7 +1017,7 @@
 
             // TANRI FORMU ZIRH VE MİĞFER EKLENTİLERİ (Horus Şahin / Set Çakal / Apis Boğa)
             const divineArmorGroup = new THREE.Group();
-            divineArmorGroup.visible = (role === 'set_boss' || role === 'anubis');
+            divineArmorGroup.visible = false;
             headGroup.add(divineArmorGroup);
 
             const helmSnout = new THREE.Mesh(
@@ -989,6 +1070,107 @@
                     feather.rotation.z = side * (0.15 + f * 0.07);
                     pivot.add(feather);
                 }
+            }
+
+            const divineRegaliaGroup = new THREE.Group();
+            divineRegaliaGroup.visible = role === 'set_boss' || role === 'anubis';
+            chestGroup.add(divineRegaliaGroup);
+            const regaliaBase = role === 'set_boss' || role === 'anubis' ? MATS.darkArmorSet : MATS.divineGold;
+
+            const deityCrown = new THREE.Group();
+            deityCrown.visible = false;
+            headGroup.add(deityCrown);
+
+            const solarHalo = new THREE.Mesh(
+                new THREE.TorusGeometry(0.36, 0.04, 12, 32),
+                MATS.divineGold
+            );
+            solarHalo.rotation.x = Math.PI / 2;
+            solarHalo.position.y = 0.36;
+            deityCrown.add(solarHalo);
+
+            const sunDisk = new THREE.Mesh(
+                new THREE.CircleGeometry(0.24, 24),
+                new THREE.MeshBasicMaterial({ color: 0xffd166, transparent: true, opacity: 0.9 })
+            );
+            sunDisk.position.set(0, 0.4, 0.1);
+            sunDisk.rotation.x = -0.2;
+            sunDisk.visible = false;
+            deityCrown.add(sunDisk);
+
+            const cobraCrown = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.09, 0.18, 0.46, 12),
+                MATS.goldenBloodMat
+            );
+            cobraCrown.position.set(0, 0.18, 0.3);
+            cobraCrown.rotation.z = Math.PI / 2;
+            cobraCrown.visible = false;
+            deityCrown.add(cobraCrown);
+
+            const serpentVine = new THREE.Mesh(
+                new THREE.TorusKnotGeometry(0.08, 0.018, 42, 8, 2, 3),
+                MATS.turquoiseGlow
+            );
+            serpentVine.position.set(0, 0.05, 0.18);
+            serpentVine.rotation.x = Math.PI / 2;
+            serpentVine.visible = false;
+            deityCrown.add(serpentVine);
+
+            const breastplate = new THREE.Mesh(new THREE.SphereGeometry(0.29, 12, 10), regaliaBase);
+            breastplate.scale.set(1.12, 0.94, 0.34);
+            breastplate.position.set(0, 0.17, 0.245);
+            divineRegaliaGroup.add(breastplate);
+
+            const pectoralShape = new THREE.Shape();
+            pectoralShape.moveTo(-0.27, 0.31);
+            pectoralShape.lineTo(-0.38, 0.05);
+            pectoralShape.lineTo(-0.26, -0.17);
+            pectoralShape.lineTo(0, -0.33);
+            pectoralShape.lineTo(0.26, -0.17);
+            pectoralShape.lineTo(0.38, 0.05);
+            pectoralShape.lineTo(0.27, 0.31);
+            pectoralShape.lineTo(0, 0.2);
+            pectoralShape.closePath();
+            const pectoral = new THREE.Mesh(new THREE.ShapeGeometry(pectoralShape), MATS.divineGold);
+            pectoral.position.set(0, 0.23, 0.32);
+            if (role === 'set_boss') pectoral.material = MATS.linenCrimson;
+            divineRegaliaGroup.add(pectoral);
+
+            for (let stripe = 0; stripe < 5; stripe++) {
+                const panel = new THREE.Mesh(new THREE.BoxGeometry(0.38 - stripe * 0.045, 0.035, 0.026), stripe % 2 ? MATS.lapisBlue : MATS.divineGold);
+                panel.position.set(0, 0.42 - stripe * 0.105, 0.345);
+                divineRegaliaGroup.add(panel);
+            }
+
+            const shoulderMantles = [];
+            for (const side of [-1, 1]) {
+                const mantle = new THREE.Mesh(new THREE.SphereGeometry(0.18, 10, 8), regaliaBase);
+                mantle.scale.set(1.18, 0.76, 0.9);
+                mantle.position.set(side * 0.33, 0.32, 0.03);
+                divineRegaliaGroup.add(mantle);
+                const trim = new THREE.Mesh(new THREE.TorusGeometry(0.13, 0.026, 6, 14), MATS.divineGold);
+                trim.scale.set(1.12, 0.75, 0.9);
+                trim.position.copy(mantle.position);
+                trim.rotation.x = Math.PI / 2;
+                divineRegaliaGroup.add(trim);
+                shoulderMantles.push(mantle);
+            }
+
+            const divineBelt = new THREE.Mesh(new THREE.CylinderGeometry(0.27, 0.3, 0.14, 12), MATS.divineGold);
+            divineBelt.position.y = -0.035;
+            divineBelt.scale.set(1, 1, 0.82);
+            divineRegaliaGroup.add(divineBelt);
+            const beltSigil = new THREE.Mesh(new THREE.OctahedronGeometry(0.105, 1), MATS.turquoiseGlow);
+            beltSigil.position.set(0, -0.04, 0.28);
+            divineRegaliaGroup.add(beltSigil);
+
+            const waistPanels = [];
+            for (let panel = -2; panel <= 2; panel++) {
+                const plate = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.48, 0.045), panel % 2 ? MATS.lapisBlue : MATS.divineGold);
+                plate.position.set(panel * 0.12, -0.3, 0.23);
+                plate.rotation.z = -panel * 0.08;
+                hipGroup.add(plate);
+                waistPanels.push(plate);
             }
 
             // KOLLAR (Doğal Omuz Geçişi, Pazı, Dirsek, Altın Kolluk Zırhı, El)
@@ -1187,9 +1369,23 @@
                 bladeBase,
                 khopeshCurve,
                 slashTrail,
+                role,
+                deityMaskGroup,
+                deityMasks,
+                mortalFaceParts,
+                divineRegaliaGroup,
+                breastplate,
+                beltSigil,
+                shoulderMantles,
+                waistPanels,
                 helmSnout,
                 leftHornEar,
-                rightHornEar
+                rightHornEar,
+                deityCrown,
+                solarHalo,
+                sunDisk,
+                cobraCrown,
+                serpentVine
             };
 
             return root;
@@ -1201,6 +1397,7 @@
             if (!rig) return;
 
             const { speed = 0, attackTimer = 0, comboStage = 0, dodgeTimer = 0, isCarrying = false, isGod = false, isMounted = false } = state;
+            const deity = state.deity || (rig.role === 'set_boss' ? 'set' : rig.role === 'anubis' ? 'anubis' : 'horus');
 
             character.userData.walkPhase = (character.userData.walkPhase || 0) + dt * (speed > 0.1 ? speed * 2.05 : 2.2);
             const p = character.userData.walkPhase;
@@ -1323,10 +1520,63 @@
             }
 
             // Tanrı Modu Kanat Çırpma Animasyonu
-            if (rig.wingsGroup.visible || isGod) {
-                const flap = Math.sin(time * 5.5) * 0.42;
+            if (rig.wingsGroup.visible) {
+                const flapRate = deity === 'set' ? 3.5 : 5.5;
+                const flapAmount = deity === 'set' ? 0.26 : 0.42;
+                const flap = Math.sin(time * flapRate) * flapAmount;
                 rig.leftWingPivot.rotation.y = 0.25 + flap;
                 rig.rightWingPivot.rotation.y = -0.25 - flap;
+            }
+
+            if (rig.deityCrown) {
+                rig.solarHalo.rotation.z += dt * 0.55;
+                rig.sunDisk.rotation.z -= dt * 0.75;
+                rig.cobraCrown.rotation.y += dt * 0.8;
+                rig.serpentVine.rotation.z += dt * 0.35;
+            }
+
+            if (isGod || rig.role === 'set_boss' || rig.role === 'anubis') {
+                const breath = Math.sin(time * (deity === 'apis' ? 1.4 : 2.1));
+                rig.chestGroup.rotation.z = breath * (deity === 'apis' ? 0.025 : 0.045);
+                rig.deityMaskGroup.rotation.y = Math.sin(time * 0.75) * 0.035;
+                rig.divineRegaliaGroup.rotation.y = Math.sin(time * 1.1) * 0.025;
+                const jewelPulse = 1 + (Math.sin(time * 3.2) + 1) * 0.08;
+                rig.beltSigil.scale.setScalar(jewelPulse);
+
+                if (deity === 'horus') {
+                    rig.hipGroup.position.y += Math.sin(time * 3.4) * 0.035;
+                    rig.spineGroup.rotation.x = -0.035 + Math.sin(time * 2.2) * 0.045;
+                    if (rig.capePivot) rig.capePivot.rotation.x = 0.18 + Math.sin(time * 3.2) * 0.1;
+                } else if (deity === 'set') {
+                    rig.spineGroup.rotation.x = 0.13 + breath * 0.035;
+                    rig.headGroup.rotation.x = -0.08 + Math.sin(time * 1.4) * 0.035;
+                    if (rig.capePivot) rig.capePivot.rotation.x = 0.3 + Math.sin(time * 2.8) * 0.09;
+                } else if (deity === 'apis') {
+                    const stomp = Math.pow(Math.max(0, Math.sin(time * 2.5)), 10);
+                    rig.hipGroup.position.y = 1.05 + stomp * 0.14;
+                    rig.spineGroup.rotation.x = 0.08 + stomp * 0.12;
+                    rig.leftLeg.hipSocket.rotation.x = -0.08 - stomp * 0.38;
+                    rig.leftLeg.kneePivot.rotation.x = stomp * 0.24;
+                    rig.rightArm.shoulderPivot.rotation.x = -0.18 - stomp * 0.18;
+                } else if (deity === 'anubis') {
+                    rig.headGroup.rotation.x = Math.sin(time * 0.8) * 0.035;
+                    rig.spineGroup.rotation.y = Math.sin(time * 0.6) * 0.025;
+                }
+            } else {
+                rig.divineRegaliaGroup.rotation.y = 0;
+                rig.beltSigil.scale.setScalar(1);
+            }
+
+            if (rig.shoulderMantles) {
+                rig.shoulderMantles.forEach((mantle, index) => {
+                    const sway = isGod ? 0.035 : Math.min(0.1, Math.abs(speed) * 0.008);
+                    mantle.rotation.z = Math.sin((isGod ? time * 1.8 : p) + index * Math.PI) * sway;
+                });
+            }
+            if (rig.waistPanels) {
+                rig.waistPanels.forEach((panel, index) => {
+                    panel.rotation.x = Math.sin(p * 0.8 + index * 0.55) * Math.min(0.16, Math.abs(speed) * 0.012);
+                });
             }
         }
 
@@ -2370,8 +2620,24 @@
         function applyGodArmorVisuals() {
             const rig = player.userData.rig;
             if (!rig) return;
-            rig.divineArmorGroup.visible = gameState.isGodMode;
-            rig.wingsGroup.visible = gameState.isGodMode && (gameState.godDeity === 'horus' || gameState.godDeity === 'set');
+            const maskName = rig.role === 'set_boss' ? 'set' : rig.role === 'anubis' ? 'anubis' : gameState.godDeity;
+            const divineVisible = gameState.isGodMode || rig.role === 'set_boss' || rig.role === 'anubis';
+            rig.deityMaskGroup.visible = divineVisible;
+            rig.mortalFaceParts.forEach(part => {
+                part.visible = !divineVisible;
+            });
+            Object.entries(rig.deityMasks).forEach(([name, mask]) => {
+                mask.visible = name === maskName;
+            });
+            rig.divineRegaliaGroup.visible = divineVisible;
+            rig.wingsGroup.visible = (gameState.isGodMode && (gameState.godDeity === 'horus' || gameState.godDeity === 'set')) || rig.role === 'set_boss';
+            if (rig.deityCrown) {
+                rig.deityCrown.visible = divineVisible;
+                rig.solarHalo.visible = maskName === 'horus' || maskName === 'apis';
+                rig.sunDisk.visible = maskName === 'horus' || maskName === 'apis';
+                rig.cobraCrown.visible = maskName === 'set' || maskName === 'anubis';
+                rig.serpentVine.visible = maskName === 'set' || maskName === 'anubis';
+            }
 
             if (gameState.godDeity === 'apis') {
                 // Boğa Boynuzları açısı
@@ -2404,6 +2670,7 @@
             } else {
                 showToast('Ölümlü İnsan (Bek) boyutuna geri döndün.');
             }
+            gameState.divineTransformTimer = 1.15;
             updateHUD();
         }
 
@@ -2984,6 +3251,7 @@
                 solarPillarMesh.rotation.y += dt * 6;
                 if (gameState.specialAnimTimer <= 0) divineVfxGroup.visible = false;
             }
+            gameState.divineTransformTimer = Math.max(0, gameState.divineTransformTimer - dt);
 
             if (!gameState.isNightEvent && Date.now() >= nextApophisAt) {
                 toggleNightApophisEvent();
@@ -3002,7 +3270,10 @@
             gameState.scaleCurrent += (gameState.scaleTarget - gameState.scaleCurrent) * Math.min(1, dt * 6);
             player.scale.setScalar(gameState.scaleCurrent);
 
-            divineAuraGroup.visible = gameState.isGodMode;
+            divineAuraGroup.visible = gameState.isGodMode || gameState.divineTransformTimer > 0;
+            const transformProgress = 1 - gameState.divineTransformTimer / 1.15;
+            const transformPulse = gameState.divineTransformTimer > 0 ? Math.sin(transformProgress * Math.PI) : 0;
+            divineAuraGroup.scale.setScalar(1 + transformPulse * 0.6);
             if (gameState.isGodMode) {
                 auraGroundRing.rotation.y += dt * 0.7;
                 auraHaloRing.rotation.y += dt * 1.1;
@@ -3101,7 +3372,8 @@
                 dodgeTimer: gameState.dodgeTimer,
                 isCarrying: false,
                 isGod: gameState.isGodMode,
-                isMounted: gameState.isMountedScarab
+                isMounted: gameState.isMountedScarab,
+                deity: gameState.godDeity
             });
 
             // 3. Yerdeki Altın Kan Damlalarını Toplama (Golden Blood Economy)
@@ -3425,6 +3697,7 @@
                 },
                 factories: {
                     createArticulatedEgyptianHuman,
+                    animateHumanoidRig,
                     createWildBeast,
                     createGoldMineRock
                 },
